@@ -9,25 +9,13 @@ A template for building documented, tested R6 classes
 \examples{
   rt <- R6Template$new(id="abc")
 }
-\section{Public fields}{
-\if{html}{\out{<div class="r6-fields">}}
-\describe{
-\item{\code{id}}{identifier for a class object}
-}
-\if{html}{\out{</div>}}
-}
-\section{Active bindings}{
-\if{html}{\out{<div class="r6-active-bindings">}}
-\describe{
-\item{\code{id}}{identifier for a class object}
-}
-\if{html}{\out{</div>}}
-}
 \section{Methods}{
 \subsection{Public methods}{
 \itemize{
 \item \href{#method-new}{\code{ADvariantExplorer$new()}}
-\item \href{#method-getID}{\code{ADvariantExplorer$getID()}}
+\item \href{#method-getTargetGene}{\code{ADvariantExplorer$getTargetGene()}}
+\item \href{#method-getFilteredGwasTable}{\code{ADvariantExplorer$getFilteredGwasTable()}}
+\item \href{#method-getFullGwasTable}{\code{ADvariantExplorer$getFullGwasTable()}}
 \item \href{#method-clone}{\code{ADvariantExplorer$clone()}}
 }
 }
@@ -37,13 +25,19 @@ A template for building documented, tested R6 classes
 \subsection{Method \code{new()}}{
 Creates a new instance of this [R6][R6::R6Class] class.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{ADvariantExplorer$new(id)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{ADvariantExplorer$new(targetGene, loc.chrom, loc.start, loc.end)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{id}}{character, an indentifier for this object}
+\item{\code{targetGene}}{character, a candidate gene for this AD GWAS locus}
+
+\item{\code{loc.chrom}}{character, the chromosome of the region to consider}
+
+\item{\code{loc.start}}{numeric, the start of the region to consider}
+
+\item{\code{loc.end}}{numeric, the end of the region to consider}
 }
 \if{html}{\out{</div>}}
 }
@@ -52,16 +46,50 @@ a new instance of ADvariantExplorer
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-getID"></a>}}
-\if{latex}{\out{\hypertarget{method-getID}{}}}
-\subsection{Method \code{getID()}}{
-accessor for the object's id field
+\if{html}{\out{<a id="method-getTargetGene"></a>}}
+\if{latex}{\out{\hypertarget{method-getTargetGene}{}}}
+\subsection{Method \code{getTargetGene()}}{
+accessor for the object's targetGene field
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{ADvariantExplorer$getID()}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{ADvariantExplorer$getTargetGene()}\if{html}{\out{</div>}}
 }
 
 \subsection{Returns}{
-the current value of the id member
+the current value of the targetGene member
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-getFilteredGwasTable"></a>}}
+\if{latex}{\out{\hypertarget{method-getFilteredGwasTable}{}}}
+\subsection{Method \code{getFilteredGwasTable()}}{
+access to the EMBL-EBI GWAS catalog via bioc, filtered
+ by location and/or targetGene
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{ADvariantExplorer$getFilteredGwasTable()}\if{html}{\out{</div>}}
+}
+
+\subsection{Returns}{
+a data.frame
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-getFullGwasTable"></a>}}
+\if{latex}{\out{\hypertarget{method-getFullGwasTable}{}}}
+\subsection{Method \code{getFullGwasTable()}}{
+access to the complete EMBL-EBI GWAS catalog via bioc
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{ADvariantExplorer$getFullGwasTable(trim.columns = FALSE)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{trim.columns}}{logical reduce to a legible 7 columns}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+a data.frame
 }
 }
 \if{html}{\out{<hr>}}
