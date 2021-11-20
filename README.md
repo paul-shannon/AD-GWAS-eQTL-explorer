@@ -1,1 +1,1 @@
-# AD-GWAS-eQTL-explorer
+# R6-template
