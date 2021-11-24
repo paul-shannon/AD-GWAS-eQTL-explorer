@@ -16,6 +16,9 @@ A template for building documented, tested R6 classes
 \item \href{#method-getTargetGene}{\code{ADvariantExplorer$getTargetGene()}}
 \item \href{#method-getFilteredGwasTable}{\code{ADvariantExplorer$getFilteredGwasTable()}}
 \item \href{#method-getFullGwasTable}{\code{ADvariantExplorer$getFullGwasTable()}}
+\item \href{#method-geteQTLSummary}{\code{ADvariantExplorer$geteQTLSummary()}}
+\item \href{#method-geteqtlStudyNamesForGroup}{\code{ADvariantExplorer$geteqtlStudyNamesForGroup()}}
+\item \href{#method-geteQTLsByLocationAndStudyID}{\code{ADvariantExplorer$geteQTLsByLocationAndStudyID()}}
 \item \href{#method-clone}{\code{ADvariantExplorer$clone()}}
 }
 }
@@ -90,6 +93,71 @@ access to the complete EMBL-EBI GWAS catalog via bioc
 }
 \subsection{Returns}{
 a data.frame
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-geteQTLSummary"></a>}}
+\if{latex}{\out{\hypertarget{method-geteQTLSummary}{}}}
+\subsection{Method \code{geteQTLSummary()}}{
+access to the complete EMBL-EBI eQTL Catalogue
+via the catalogueR R package, focusing on expression cis-QTLs
+and sQTL (splicing)
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{ADvariantExplorer$geteQTLSummary()}\if{html}{\out{</div>}}
+}
+
+\subsection{Returns}{
+a data.frame
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-geteqtlStudyNamesForGroup"></a>}}
+\if{latex}{\out{\hypertarget{method-geteqtlStudyNamesForGroup}{}}}
+\subsection{Method \code{geteqtlStudyNamesForGroup()}}{
+returns the retrieval-ready study names given
+(part of) a qtl_group string
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{ADvariantExplorer$geteqtlStudyNamesForGroup(groupMatchingString)}\if{html}{\out{</div>}}
+}
+
+\subsection{Returns}{
+a data.frame
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-geteQTLsByLocationAndStudyID"></a>}}
+\if{latex}{\out{\hypertarget{method-geteQTLsByLocationAndStudyID}{}}}
+\subsection{Method \code{geteQTLsByLocationAndStudyID()}}{
+access to the complete EMBL-EBI eQTL Catalogue
+via the catalogueR R package, focusing on expression cis-QTLs
+and sQTL (splicing
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{ADvariantExplorer$geteQTLsByLocationAndStudyID(
+  chrom,
+  start,
+  end,
+  studyIDs,
+  simplify = FALSE
+)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{chrom}}{character}
+
+\item{\code{start}}{numeric}
+
+\item{\code{end}}{numeric}
+
+\item{\code{studyIDs}}{character vector, one or more values from eQTL summary unique_id column}
+
+\item{\code{simplify}}{logical, trims columns to just the crucial 4: rsid, pvalue, gene, samples}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+a data.frame ordered by increasing pvalue.QTL
 }
 }
 \if{html}{\out{<hr>}}

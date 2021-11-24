@@ -19,8 +19,8 @@ ADvariantExplorer = R6Class("ADvariantExplorer",
                    tbl.gwascat=NULL,
                    tbl.gwascat.filtered=NULL,
                    tag.snps=NULL,
-                   tbl.haplotypes=NULL
-                   ),
+                   tbl.haplotypes=NULL,
+                   tbl.eqtl.summary=NULL),
 
     #--------------------------------------------------------------------------------
     public = list(
@@ -42,6 +42,7 @@ ADvariantExplorer = R6Class("ADvariantExplorer",
             colnames(tbl.gwascat)[1] <- "chrom"
             tbl.gwascat$chrom <- as.character(tbl.gwascat$chrom)
             private$tbl.gwascat <- tbl.gwascat
+            private$tbl.eqtl.summary <- get(data(meta, package="catalogueR"))
             },
 
         #------------------------------------------------------------
@@ -85,7 +86,64 @@ ADvariantExplorer = R6Class("ADvariantExplorer",
             tbl$STUDY <- substr(tbl$STUDY, 1, 30)
             tbl$INITIAL.SAMPLE.SIZE <- substr(tbl$INITIAL.SAMPLE.SIZE, 1, 20)
             invisible(tbl)
-            }
+            },
+
+        #------------------------------------------------------------
+        #' @description access to the complete EMBL-EBI eQTL Catalogue
+        #' via the catalogueR R package, focusing on expression cis-QTLs
+        #' and sQTL (splicing)
+        #' @return a data.frame
+        geteQTLSummary = function(){
+            private$tbl.eqtl.summary
+            },
+
+        #------------------------------------------------------------
+        #' @description returns the retrieval-ready study names given
+        #' (part of) a qtl_group string
+        #' @return a data.frame
+        geteqtlStudyNamesForGroup = function(groupMatchingString){
+            tbl.cat <- private$tbl.eqtl.summary
+            indices <- grep(groupMatchingString, tbl.cat$qtl_group)
+            if(length(indices) == 0)
+                return(NA)
+            sort(unique(tbl.cat[indices,]$unique_id))
+            },
+
+        #------------------------------------------------------------
+        #' @description access to the complete EMBL-EBI eQTL Catalogue
+        #' via the catalogueR R package, focusing on expression cis-QTLs
+        #' and sQTL (splicing
+        #' @param chrom character
+        #' @param start numeric
+        #' @param end numeric
+        #' @param studyIDs character vector, one or more values from eQTL summary unique_id column
+        #' @param simplify logical, trims columns to just the crucial 4: rsid, pvalue, gene, samples
+        #' @return a data.frame ordered by increasing pvalue.QTL
+        geteQTLsByLocationAndStudyID = function(chrom, start, end, studyIDs, simplify=FALSE){
+           tbls <- list()
+           data(meta)
+           for(id in studyIDs){
+              message(sprintf("--- fetching %s (ge)", id))
+              tbl <- eQTL_Catalogue.fetch(unique_id=id,
+                                          quant_method="ge",
+                                          nThread = 1,
+                                          use_tabix=TRUE,
+                                          chrom = sub("chr", "", chrom),
+                                          bp_lower=start,
+                                          bp_upper=end,
+                                          verbose=TRUE)
+              tbls[[id]] <- tbl
+              } # for id
+           tbl.out <- do.call(rbind, tbls)
+           rownames(tbl.out) <- NULL
+           new.order <- order(tbl.out$pvalue.QTL, decreasing=FALSE)
+           coi <- c("rsid.QTL", "pvalue.QTL", "gene.QTL", "ma_samples.QTL")
+           if(simplify){
+               tbl.out <- tbl.out[, coi]
+               colnames(tbl.out) <- c("rsid", "pvalue", "gene", "samples")
+               }
+           invisible(as.data.frame(tbl.out[new.order,]))
+           } # geteEQTLsByLocationAndCategory
 
 
        ) # public

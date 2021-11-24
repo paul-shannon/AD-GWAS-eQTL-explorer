@@ -1,3 +1,5 @@
+inst/unitTests/*.tbi
+
 # History files
 .Rhistory
 .Rapp.history
