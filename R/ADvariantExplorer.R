@@ -4,9 +4,9 @@
 
 #' @import catalogueR
 #' @import gwascat
-#'
-#' @examples
-#'   rt <- R6Template$new(id="abc")
+#' @import EnsDb.Hsapiens.v79
+#' @import AnnotationDbi
+#
 #' @export
 
 ADvariantExplorer = R6Class("ADvariantExplorer",
@@ -121,27 +121,41 @@ ADvariantExplorer = R6Class("ADvariantExplorer",
         #' @return a data.frame ordered by increasing pvalue.QTL
         geteQTLsByLocationAndStudyID = function(chrom, start, end, studyIDs, simplify=FALSE){
            tbls <- list()
-           data(meta)
+           #data(meta)
            for(id in studyIDs){
               message(sprintf("--- fetching %s (ge)", id))
-              tbl <- eQTL_Catalogue.fetch(unique_id=id,
-                                          quant_method="ge",
-                                          nThread = 1,
-                                          use_tabix=TRUE,
-                                          chrom = sub("chr", "", chrom),
-                                          bp_lower=start,
-                                          bp_upper=end,
-                                          verbose=TRUE)
+              suppressWarnings({tbl <- fetch_restAPI(unique_id=id,
+                                   quant_method="ge",
+                                   chrom = sub("chr", "", chrom),
+                                   bp_lower=start,
+                                   bp_upper=end,
+                                   verbose=TRUE)})
+
+              # avoid the tabix approach for now
+              # tbl <- eQTL_Catalogue.fetch(unique_id=id,
+              #                             quant_method="ge",
+              #                             nThread = 1,
+              #                             use_tabix=TRUE,
+              #                             chrom = sub("chr", "", chrom),
+              #                             bp_lower=start,
+              #                             bp_upper=end,
+              #                             verbose=TRUE)
               tbls[[id]] <- tbl
               } # for id
            tbl.out <- do.call(rbind, tbls)
            rownames(tbl.out) <- NULL
            new.order <- order(tbl.out$pvalue.QTL, decreasing=FALSE)
-           coi <- c("rsid.QTL", "pvalue.QTL", "gene.QTL", "ma_samples.QTL")
+           coi <- c("rsid.QTL", "pvalue.QTL", "gene_id.QTL", "an.QTL", "beta.QTL")
            if(simplify){
-               tbl.out <- tbl.out[, coi]
-               colnames(tbl.out) <- c("rsid", "pvalue", "gene", "samples")
-               }
+              tbl.out <- tbl.out[, coi]
+              colnames(tbl.out) <- c("rsid", "pvalue", "gene", "total.alleles", "beta")
+              }
+           map <- mapIds(EnsDb.Hsapiens.v79, tbl.out$gene, "SYMBOL", "GENEID")
+           tbl.map <- data.frame(ensg=names(map), symbol=as.character(map), stringsAsFactors=FALSE)
+           na.indices <- which(is.na(tbl.map$symbol))
+           length(na.indices)
+           tbl.map$symbol[na.indices] <- tbl.map$ensg[na.indices]
+           tbl.out$gene <- tbl.map$symbol
            invisible(as.data.frame(tbl.out[new.order,]))
            } # geteEQTLsByLocationAndCategory
 

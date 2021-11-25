@@ -1,13 +1,13 @@
 Package: ADvariantExplorer
 Type: Package
 Title: ADvariantExplorer
-Version: 1.0.2
+Version: 1.0.3
 Date: 2021-11-24
 Author: Paul Shannon
 Maintainer: Paul Shannon<paul.thurmond.shannon@gmail.com>
-Imports:
-Description: a minimal but full-featured package upon which to model a documented, tested R6 package
-Depends: R (>= 4.1.0), R6
+Imports: catalogueR, gwascat
+Description: easy access to GWAS and eQTL data sets
+Depends: R (>= 4.1.0), R6, EnsDb.Hsapiens.v79
 License: MIT
 Encoding: UTF-8
 RoxygenNote: 7.1.2

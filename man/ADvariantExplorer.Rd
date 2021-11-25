@@ -6,9 +6,6 @@
 \description{
 A template for building documented, tested R6 classes
 }
-\examples{
-  rt <- R6Template$new(id="abc")
-}
 \section{Methods}{
 \subsection{Public methods}{
 \itemize{

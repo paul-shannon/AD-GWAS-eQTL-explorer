@@ -5,7 +5,7 @@ runTests <- function()
 {
     test_ctor()
     test_gwasCatalog()
-    test_eqtlCatalog()
+    test_eqtlCatalogVariants()
 
 } # runTests
 #----------------------------------------------------------------------------------------------------
@@ -22,6 +22,20 @@ test_ctor <- function()
     checkEquals(avx$getTargetGene(), targetGene)
 
 } # test_ctor
+#----------------------------------------------------------------------------------------------------
+test_tablixToEBIeQTLCatalog <- function()
+{
+  tbl <- fetch_restAPI(unique_id="Alasoo_2018.macrophage_naive",
+                                chrom="8", bp_lower=27603335, bp_upper=27608281)
+
+   cmd <- sprintf("%s %s/%s %s",
+                   "tabix",
+                   "ftp://ftp.ebi.ac.uk/pub/databases/spot/eQTL/csv",
+                   "Alasoo_2018/ge/Alasoo_2018_ge_macrophage_naive.all.tsv.gz",
+                   "8:27603335-27608281")
+   system(cmd)
+
+} # test_tabixToEBIdQTLCatalog
 #----------------------------------------------------------------------------------------------------
 test_gwasCatalog <- function()
 {
@@ -103,6 +117,7 @@ test_eqtlCatalogVariants <- function()
     start <- 27603335
     end   <- 27608281
     tbl.1 <- avx$geteQTLsByLocationAndStudyID(chrom, start, end, study.1, simplify=TRUE)
+
     tbl.2 <- avx$geteQTLsByLocationAndStudyID(chrom, start, end, study.2, simplify=TRUE)
     tbl.12 <- avx$geteQTLsByLocationAndStudyID(chrom, start, end, c(study.1, study.2), simplify=TRUE)
     checkEquals(nrow(tbl.1) + nrow(tbl.2), nrow(tbl.12))
@@ -111,12 +126,13 @@ test_eqtlCatalogVariants <- function()
                                                           "ROSMAP.brain_naive", simplify=TRUE)
     dim(tbl.rosmap.brain)
     checkTrue(nrow(tbl.rosmap.brain) > 160)
-    tbl.gtex.bc <- avx$geteQTLsByLocationAndStudyID(chrom, start, end,
-                                                    "GTEx.brain_cortex", simplify=TRUE)
-    dim(tbl.gtex.bc)
-    checkTrue(nrow(tbl.gtex.bc) > 430)
 
-} # test_eqtlCatalog
+    # this fails with a 404
+    #tbl.gtex.bc <- avx$geteQTLsByLocationAndStudyID(chrom, start, end, "GTEx.brain_cortex", simplify=TRUE)
+    #dim(tbl.gtex.bc)
+    #checkTrue(nrow(tbl.gtex.bc) > 430)
+
+} # test_eqtlCatalogVariants
 #----------------------------------------------------------------------------------------------------
 # rs867230  8:27610986 (GRCh38)
 viz <- function()
