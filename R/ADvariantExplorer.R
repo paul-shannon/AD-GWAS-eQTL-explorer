@@ -6,6 +6,7 @@
 #' @import gwascat
 #' @import EnsDb.Hsapiens.v79
 #' @import AnnotationDbi
+#' @import plyr
 #
 #' @export
 
@@ -147,7 +148,7 @@ ADvariantExplorer = R6Class("ADvariantExplorer",
               tbl$id <- id
               tbls[[id]] <- tbl
               } # for id
-           tbl.out <- do.call(rbind, tbls)
+           tbl.out <- do.call(rbind.fill, tbls)
            rownames(tbl.out) <- NULL
            new.order <- order(tbl.out$pvalue.QTL, decreasing=FALSE)
            tbl.out <- tbl.out[new.order,]
@@ -162,6 +163,7 @@ ADvariantExplorer = R6Class("ADvariantExplorer",
            length(na.indices)
            tbl.map$symbol[na.indices] <- tbl.map$ensg[na.indices]
            tbl.out$gene <- tbl.map$symbol
+           rownames(tbl.out) <- NULL
            invisible(as.data.frame(tbl.out))
            } # geteEQTLsByLocationAndCategory
 

@@ -6,6 +6,7 @@ runTests <- function()
     test_ctor()
     test_gwasCatalog()
     test_eqtlCatalogVariants()
+    test_eqtCatalogVariants_combineSlightlyDiscordantStudies()
 
 } # runTests
 #----------------------------------------------------------------------------------------------------
@@ -134,6 +135,25 @@ test_eqtlCatalogVariants <- function()
     #checkTrue(nrow(tbl.gtex.bc) > 430)
 
 } # test_eqtlCatalogVariants
+#----------------------------------------------------------------------------------------------------
+# "BrainSeq.brain"     "ROSMAP.brain_naive" have 23 and 25 columns, requring rbind with fill
+test_eqtCatalogVariants_combineSlightlyDiscordantStudies <- function()
+{
+    message(sprintf("--- test_eqtCatalogVariants_combineSlightlyDiscordantStudies"))
+
+    targetGene <- "CLU"
+    chrom <- rep("8", 3)
+    start <- c(27354393, 27337603,27362469)
+    end   <- c(27354394, 27337604, 27362470)
+    avx <- ADvariantExplorer$new(targetGene, chrom[2], start[2], end[2])
+
+    studies <- c("BrainSeq.brain",  "ROSMAP.brain_naive")
+    i <- 2
+    tbl <- avx$geteQTLsByLocationAndStudyID(chrom[i], start[i], end[i], studies, method="REST", simplify=TRUE)
+    checkTrue(nrow(tbl) > 35)
+    checkEquals(ncol(tbl), 6)
+
+} # test_eqtCatalogVariants_combineSlightlyDiscordantStudies
 #----------------------------------------------------------------------------------------------------
 # rs867230  8:27610986 (GRCh38)
 viz <- function()
