@@ -117,38 +117,44 @@ ADvariantExplorer = R6Class("ADvariantExplorer",
         #' @param start numeric
         #' @param end numeric
         #' @param studyIDs character vector, one or more values from eQTL summary unique_id column
+        #' @param method character, either REST or tabix, REST by default
         #' @param simplify logical, trims columns to just the crucial 4: rsid, pvalue, gene, samples
         #' @return a data.frame ordered by increasing pvalue.QTL
-        geteQTLsByLocationAndStudyID = function(chrom, start, end, studyIDs, simplify=FALSE){
+        geteQTLsByLocationAndStudyID = function(chrom, start, end, studyIDs, method="REST", simplify=FALSE){
+           method <- tolower(method)
+           stopifnot(method %in% c("rest", "tabix"))
            tbls <- list()
-           #data(meta)
            for(id in studyIDs){
               message(sprintf("--- fetching %s (ge)", id))
-              suppressWarnings({tbl <- fetch_restAPI(unique_id=id,
-                                   quant_method="ge",
-                                   chrom = sub("chr", "", chrom),
-                                   bp_lower=start,
-                                   bp_upper=end,
-                                   verbose=TRUE)})
-
-              # avoid the tabix approach for now
-              # tbl <- eQTL_Catalogue.fetch(unique_id=id,
-              #                             quant_method="ge",
-              #                             nThread = 1,
-              #                             use_tabix=TRUE,
-              #                             chrom = sub("chr", "", chrom),
-              #                             bp_lower=start,
-              #                             bp_upper=end,
-              #                             verbose=TRUE)
+              if(method=="rest"){
+                  suppressWarnings({tbl <- fetch_restAPI(unique_id=id,
+                                                         quant_method="ge",
+                                                         chrom = sub("chr", "", chrom),
+                                                         bp_lower=start,
+                                                         bp_upper=end,
+                                                         verbose=TRUE)})
+                  } # rest
+              else{ # tabix
+                 suppressWarnings({tbl <- eQTL_Catalogue.fetch(unique_id=id,
+                                                               quant_method="ge",
+                                                               nThread = 1,
+                                                               use_tabix=TRUE,
+                                                               chrom = sub("chr", "", chrom),
+                                                               bp_lower=start,
+                                                               bp_upper=end,
+                                                               verbose=TRUE)})
+                 } # tabix
+              tbl$id <- id
               tbls[[id]] <- tbl
               } # for id
            tbl.out <- do.call(rbind, tbls)
            rownames(tbl.out) <- NULL
            new.order <- order(tbl.out$pvalue.QTL, decreasing=FALSE)
-           coi <- c("rsid.QTL", "pvalue.QTL", "gene_id.QTL", "an.QTL", "beta.QTL")
+           tbl.out <- tbl.out[new.order,]
+           coi <- c("rsid.QTL", "pvalue.QTL", "gene_id.QTL", "an.QTL", "beta.QTL", "id")
            if(simplify){
               tbl.out <- tbl.out[, coi]
-              colnames(tbl.out) <- c("rsid", "pvalue", "gene", "total.alleles", "beta")
+              colnames(tbl.out) <- c("rsid", "pvalue", "gene", "total.alleles", "beta", "id")
               }
            map <- mapIds(EnsDb.Hsapiens.v79, tbl.out$gene, "SYMBOL", "GENEID")
            tbl.map <- data.frame(ensg=names(map), symbol=as.character(map), stringsAsFactors=FALSE)
@@ -156,7 +162,7 @@ ADvariantExplorer = R6Class("ADvariantExplorer",
            length(na.indices)
            tbl.map$symbol[na.indices] <- tbl.map$ensg[na.indices]
            tbl.out$gene <- tbl.map$symbol
-           invisible(as.data.frame(tbl.out[new.order,]))
+           invisible(as.data.frame(tbl.out))
            } # geteEQTLsByLocationAndCategory
 
 

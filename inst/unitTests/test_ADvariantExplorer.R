@@ -116,6 +116,7 @@ test_eqtlCatalogVariants <- function()
     chrom <- "8"
     start <- 27603335
     end   <- 27608281
+    1 + end - start
     tbl.1 <- avx$geteQTLsByLocationAndStudyID(chrom, start, end, study.1, simplify=TRUE)
 
     tbl.2 <- avx$geteQTLsByLocationAndStudyID(chrom, start, end, study.2, simplify=TRUE)
