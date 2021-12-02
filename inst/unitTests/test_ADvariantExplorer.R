@@ -24,20 +24,6 @@ test_ctor <- function()
 
 } # test_ctor
 #----------------------------------------------------------------------------------------------------
-test_tablixToEBIeQTLCatalog <- function()
-{
-  tbl <- fetch_restAPI(unique_id="Alasoo_2018.macrophage_naive",
-                                chrom="8", bp_lower=27603335, bp_upper=27608281)
-
-   cmd <- sprintf("%s %s/%s %s",
-                   "tabix",
-                   "ftp://ftp.ebi.ac.uk/pub/databases/spot/eQTL/csv",
-                   "Alasoo_2018/ge/Alasoo_2018_ge_macrophage_naive.all.tsv.gz",
-                   "8:27603335-27608281")
-   system(cmd)
-
-} # test_tabixToEBIdQTLCatalog
-#----------------------------------------------------------------------------------------------------
 test_gwasCatalog <- function()
 {
     message(sprintf("--- test_gwasCatalog"))
@@ -47,11 +33,35 @@ test_gwasCatalog <- function()
     loc.start <- 27447528
     loc.end   <- 27764088
     avx <- ADvariantExplorer$new(targetGene, loc.chrom, loc.start, loc.end)
-    tbl.f <- avx$getFilteredGwasTable()
-    checkTrue(nrow(tbl.f) < 30)
+
+    tbl.1 <- avx$getFilteredGwasTable(targetGeneOnly=FALSE)
+    checkTrue(length(tbl.1$MAPPED_GENE) > 1)
+    checkTrue(nrow(tbl.1) > 20)
+
+    tbl.2 <- avx$getFilteredGwasTable(targetGeneOnly=TRUE)
+    mapped.genes <- unique(tbl.2$MAPPED_GENE)
+      # e.g.,  "CLU", "CLU - SCARA3"
+    checkEquals(length(grep(targetGene, mapped.genes, ignore.case=TRUE)),
+                length(mapped.genes))
+    checkTrue(nrow(tbl.1) > nrow(tbl.2))
+
+    tbl.3 <- avx$getFilteredGwasTable(targetGeneOnly=FALSE, studyString="")
+    checkTrue(nrow(tbl.3) > 50)
+    checkTrue(length(unique(tbl.3$STUDY)) > length(unique(tbl.1$STUDY)))
+    mapped.genes <- unique(tbl.3$MAPPED_GENE)
+    checkTrue(length(grep(targetGene, mapped.genes, ignore.case=TRUE)) < length(mapped.genes))
+
+       #------------------------------------------------------------
+       # now get the entire table, with and without trimming columns
+       #------------------------------------------------------------
+
     tbl.all <- avx$getFullGwasTable(trim.columns=TRUE)
     dim(tbl.all)
     checkTrue(nrow(tbl.all) > 110000)
+
+    tbl.all.noTrim <- avx$getFullGwasTable(trim.columns=FALSE)
+    checkTrue(nrow(tbl.all.noTrim) > 110000)
+    checkTrue(ncol(tbl.all.noTrim) > 40)
 
 } # test_gwasCatalog
 #----------------------------------------------------------------------------------------------------
@@ -66,8 +76,13 @@ test_eqtlCatalogSummary <- function()
 
     avx <- ADvariantExplorer$new(targetGene, loc.chrom, loc.start, loc.end)
     tbl.cat <- avx$geteQTLSummary()
+    checkTrue(nrow(tbl.cat) > 490)
+    checkEquals(ncol(tbl.cat), 12)
+      # the unique_id values are used in subsequent fetch of actual datasets
     study.ids <- unique(tbl.cat$unique_id)
     checkEquals(grep("brain_naive", study.ids, value=TRUE), "ROSMAP.brain_naive")
+       # GTEx_V8 eqtls added to catalogueR, dev branch, on (1 dec 2021)
+    checkTrue(length(grep("GTEx_V8", study.ids)) >= 49)
 
 } # test_eqtlCatalogSummary
 #----------------------------------------------------------------------------------------------------
@@ -103,7 +118,7 @@ test_eqtlCatalogVariants <- function()
     loc.end   <- 27764088
     avx <- ADvariantExplorer$new(targetGene, loc.chrom, loc.start, loc.end)
     tbl.cat <- avx$geteQTLSummary()
-    dim(tbl.cat) # 397 12
+    dim(tbl.cat) # 498 12
     checkTrue(nrow(tbl.cat) > 390)
     checkEquals(ncol(tbl.cat), 12)
 
@@ -125,7 +140,7 @@ test_eqtlCatalogVariants <- function()
     checkEquals(nrow(tbl.1) + nrow(tbl.2), nrow(tbl.12))
 
     tbl.rosmap.brain <- avx$geteQTLsByLocationAndStudyID(chrom, start, end,
-                                                          "ROSMAP.brain_naive", simplify=TRUE)
+                                                         "ROSMAP.brain_naive", simplify=TRUE)
     dim(tbl.rosmap.brain)
     checkTrue(nrow(tbl.rosmap.brain) > 160)
 
@@ -154,6 +169,100 @@ test_eqtCatalogVariants_combineSlightlyDiscordantStudies <- function()
     checkEquals(ncol(tbl), 6)
 
 } # test_eqtCatalogVariants_combineSlightlyDiscordantStudies
+#----------------------------------------------------------------------------------------------------
+test_eqtCatalogVariants_AD_associated_NDUFS2 <- function()
+{
+   message(sprintf("--- test_eqtCatalogVariants_AD_associated_NDUFS2"))
+
+   targetGene <- "NDUFS2"
+   tag.snp <- "rs4575098"
+   tag.snp.loc <- 161185602
+   chrom <- "1"
+   ld.snp  <- "rs11585858"
+
+   shoulder <- 1000
+   avx <- ADvariantExplorer$new(targetGene, chrom, tag.snp.loc-shoulder, tag.snp.loc+shoulder)
+   tbl.gwas <- avx$getFilteredGwasTable()
+   dim(tbl.gwas)
+   tbl.gwas
+
+   studies <- c("BrainSeq.brain",  "ROSMAP.brain_naive")
+   i <- 2
+   tbl <- avx$geteQTLsByLocationAndStudyID(chrom[i], start[i], end[i], studies, method="REST", simplify=TRUE)
+
+   tbl.cat <- avx$geteQTLSummary()
+   dim(tbl.cat)
+   studies <- c()
+   studies <- c(studies, subset(tbl.cat, qtl_group=="macrophage_naive" & quant_method=="ge")$unique_id)
+   studies <- c(studies, subset(tbl.cat, study=="GTEx_V8" & grepl("Brain", tissue_label))$unique_id)
+
+   studies <- sort(unique(subset(tbl.cat, quant_method=="ge"))$unique_id)
+   length(studies)
+   tbl <- avx$geteQTLsByLocationAndStudyID(chrom, tag.snp.loc-shoulder, tag.snp.loc+shoulder, studies, method="REST", simplify=TRUE)
+   dim(tbl)
+   head(tbl, n=20)
+   subset(tbl, rsid=="rs4575098" & pvalue < 1e-3)
+
+} # test_eqtCatalogVariants_AD_associated_NDUFS2
+#----------------------------------------------------------------------------------------------------
+explore.failed.fetches <- function()
+{
+   targetGene <- "NDUFS2"
+   tag.snp <- "rs4575098"
+   tag.snp.loc <- 161185602
+   chrom <- "1"
+   ld.snp  <- "rs11585858"
+
+   shoulder <- 10000
+   avx <- ADvariantExplorer$new(targetGene, chrom, tag.snp.loc-shoulder, tag.snp.loc+shoulder)
+
+   tbl.cat <- avx$geteQTLSummary()
+   studies <- unique(subset(tbl.cat, quant_method=="ge")$unique_id)
+   length(studies)  # 157
+   old.gtex.notWorking <- grep("GTEx.", studies, fixed=TRUE)
+   length(old.gtex.notWorking) # 49
+   studies <- studies[-old.gtex.notWorking]
+   length(studies)   # 108
+   tbl <- avx$geteQTLsByLocationAndStudyID(chrom, tag.snp.loc-shoulder, tag.snp.loc+shoulder,
+                                           studies, method="REST", simplify=TRUE)
+
+       #----------------------------------------
+       # 25/108 failures (1 dec 2021)
+       #----------------------------------------
+    # Alasoo_2018.macrophage_IFNg+Salmonella
+    # Schmiedel_2018.Tfh_memory
+    # Schmiedel_2018.Th17_memory
+    # Schmiedel_2018.Th1_memory
+    # Schmiedel_2018.Th2_memory
+    # Schmiedel_2018.Th1-17_memory
+    # Schmiedel_2018.B-cell_naive
+    # Schmiedel_2018.CD4_T-cell_naive
+    # Schmiedel_2018.CD8_T-cell_naive
+    # Schmiedel_2018.monocyte_CD16_naive
+    # Schmiedel_2018.monocyte_naive
+    # Schmiedel_2018.NK-cell_naive
+    # Braineac2.putamen
+    # Braineac2.substantia_nigra
+    # CommonMind.DLPFC_naive
+    # CAP.LCL_naive
+    # CAP.LCL_statin
+    # iPSCORE.iPSC
+    # Peng_2018.placenta_naive
+    # PhLiPS.iPSC
+    # PhLiPS.HLC
+    # Steinberg_2020.synovium_naive
+    # Steinberg_2020.low_grade_cartilage_naive
+    # Steinberg_2020.high_grade_cartilage_naive
+    # Young_2019.microglia_naive
+
+
+   dim(tbl)
+    # error message, in console and in web browser
+    #  {"status": 404, "error": "Resource Not Found", "message":
+    #  "Not found. Study :Alasoo_2018 with qtl_group: macrophage_IFNg Salmonella and quantification method: ge"}
+   subset(tbl.cat, unique_id == study)
+
+} # explore.failed.fetches
 #----------------------------------------------------------------------------------------------------
 # rs867230  8:27610986 (GRCh38)
 viz <- function()

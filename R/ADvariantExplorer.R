@@ -55,16 +55,30 @@ ADvariantExplorer = R6Class("ADvariantExplorer",
 
         #------------------------------------------------------------
         #' @description access to the EMBL-EBI GWAS catalog via bioc, filtered
-        #'  by location and/or targetGene
+        #' by location and/or targetGene
+        #' @param targetGeneOnly logical, default TRUE, otherwise all variants in this regeion,
+        #' @param studyString character, default "alzheimer", possibly empty string or any other
+        #'   study field matchabel substring
+        #' affecting any gene whatsoever
+        #'
         #' @return a data.frame
-        getFilteredGwasTable = function(){
-            tbl.sub <- subset(private$tbl.gwascat, chrom==sub("chr", "", private$loc.chrom) &
-                                                   start >= private$loc.start & end <= private$loc.end |
-                              grepl("CLU", MAPPED_GENE))
-            soi <- grep("Alzheimer", tbl.sub$STUDY, ignore.case=TRUE)
-            tbl <- tbl.sub[soi,]
+        getFilteredGwasTable = function(targetGeneOnly=TRUE, studyString="alzheimer"){
+            printf("--- entering getFilteredGwasTable, targetGeneOnly = %s", targetGeneOnly)
+            tbl.sub <- subset(private$tbl.gwascat,
+                              chrom==sub("chr", "", private$loc.chrom) &
+                              start >= private$loc.start &
+                              end <= private$loc.end)
+            xyz <- 99
+            if(targetGeneOnly){
+               keepers <- grep(private$targetGene, tbl.sub$MAPPED_GENE)
+               tbl.sub <- tbl.sub[keepers,]
+               }
+            if(nchar(studyString) > 0){
+               soi <- grep(studyString, tbl.sub$STUDY, ignore.case=TRUE)
+               tbl.sub <- tbl.sub[soi,]
+               }
             coi <- c("SNPS", "P.VALUE", "MAPPED_GENE", "FIRST.AUTHOR", "DATE", "INITIAL.SAMPLE.SIZE", "STUDY" )
-            tbl <- tbl[, coi]
+            tbl <- tbl.sub[, coi]
             tbl$STUDY <- substr(tbl$STUDY, 1, 30)
             tbl$INITIAL.SAMPLE.SIZE <- substr(tbl$INITIAL.SAMPLE.SIZE, 1, 20)
             new.order <- order(tbl$P.VALUE, decreasing=FALSE)
@@ -80,8 +94,10 @@ ADvariantExplorer = R6Class("ADvariantExplorer",
         #' @return a data.frame
         getFullGwasTable = function(trim.columns=FALSE){
             tbl.full <- private$tbl.gwascat
-            if(!trim.columns)
-                invisible(tbl.full)
+            printf("--- getFullGwasTable, trim.columns: %s", trim.columns)
+            if(!trim.columns){
+               return(invisible(tbl.full))
+               }
             coi <- c("SNPS", "P.VALUE", "MAPPED_GENE", "FIRST.AUTHOR", "DATE", "INITIAL.SAMPLE.SIZE", "STUDY" )
             tbl <- tbl.full[, coi]
             tbl$STUDY <- substr(tbl$STUDY, 1, 30)
@@ -95,7 +111,7 @@ ADvariantExplorer = R6Class("ADvariantExplorer",
         #' and sQTL (splicing)
         #' @return a data.frame
         geteQTLSummary = function(){
-            private$tbl.eqtl.summary
+            as.data.frame(private$tbl.eqtl.summary)
             },
 
         #------------------------------------------------------------
@@ -127,26 +143,33 @@ ADvariantExplorer = R6Class("ADvariantExplorer",
            tbls <- list()
            for(id in studyIDs){
               message(sprintf("--- fetching %s (ge)", id))
-              if(method=="rest"){
-                  suppressWarnings({tbl <- fetch_restAPI(unique_id=id,
-                                                         quant_method="ge",
-                                                         chrom = sub("chr", "", chrom),
-                                                         bp_lower=start,
-                                                         bp_upper=end,
-                                                         verbose=TRUE)})
+              tryCatch({
+                  if(method=="rest"){
+                      suppressWarnings({tbl <- eQTL_Catalogue.fetch(unique_id=id,
+                                                                    quant_method="ge",
+                                                                    use_tabix=FALSE,
+                                                                    chrom = sub("chr", "", chrom),
+                                                                    bp_lower=start,
+                                                                    bp_upper=end,
+                                                                    verbose=TRUE)})
                   } # rest
-              else{ # tabix
-                 suppressWarnings({tbl <- eQTL_Catalogue.fetch(unique_id=id,
-                                                               quant_method="ge",
-                                                               nThread = 1,
-                                                               use_tabix=TRUE,
-                                                               chrom = sub("chr", "", chrom),
-                                                               bp_lower=start,
-                                                               bp_upper=end,
-                                                               verbose=TRUE)})
-                 } # tabix
-              tbl$id <- id
-              tbls[[id]] <- tbl
+                  else{ # tabix
+                      suppressWarnings({tbl <- eQTL_Catalogue.fetch(unique_id=id,
+                                                                    quant_method="ge",
+                                                                    nThread = 1,
+                                                                    use_tabix=TRUE,
+                                                                    chrom = sub("chr", "", chrom),
+                                                                    bp_lower=start,
+                                                                    bp_upper=end,
+                                                                    verbose=TRUE)})
+                  } # tabix
+                  tbl$id <- id
+                  tbls[[id]] <- tbl
+              },
+              error = function(e){
+                  message(sprintf("eQTL_Catalogue.fetch failed on study %s", id))
+                  print(e)
+                  })
               } # for id
            tbl.out <- do.call(rbind.fill, tbls)
            rownames(tbl.out) <- NULL

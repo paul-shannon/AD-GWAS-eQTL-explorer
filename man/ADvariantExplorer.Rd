@@ -63,11 +63,19 @@ the current value of the targetGene member
 \if{latex}{\out{\hypertarget{method-getFilteredGwasTable}{}}}
 \subsection{Method \code{getFilteredGwasTable()}}{
 access to the EMBL-EBI GWAS catalog via bioc, filtered
- by location and/or targetGene
+by location and/or targetGene
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{ADvariantExplorer$getFilteredGwasTable()}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{ADvariantExplorer$getFilteredGwasTable(targetGeneOnly = TRUE)}\if{html}{\out{</div>}}
 }
 
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{targetGeneOnly}}{logical, default TRUE, otherwise all variants in this regeion,
+affecting any gene whatsoever}
+}
+\if{html}{\out{</div>}}
+}
 \subsection{Returns}{
 a data.frame
 }
