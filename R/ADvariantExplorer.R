@@ -174,7 +174,6 @@ ADvariantExplorer = R6Class("ADvariantExplorer",
               } # for id
            tbl.out <- do.call(rbind.fill, tbls)
            rownames(tbl.out) <- NULL
-           browser()
            if(is.null(tbl.out))
                return(data.frame())
            new.order <- order(tbl.out$pvalue.QTL, decreasing=FALSE)

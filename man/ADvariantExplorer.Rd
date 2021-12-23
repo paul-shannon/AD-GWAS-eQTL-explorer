@@ -4,7 +4,7 @@
 \alias{ADvariantExplorer}
 \title{ADvariantExplorer}
 \description{
-A template for building documented, tested R6 classes
+access to GWAS and eQTL data, slighly optimized for Alzheimer's disease
 }
 \section{Methods}{
 \subsection{Public methods}{
@@ -68,7 +68,8 @@ by location and/or targetGene
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{ADvariantExplorer$getFilteredGwasTable(
   targetGeneOnly = TRUE,
-  studyString = "alzheimer"
+  studyString = "alzheimer",
+  trim.columns = TRUE
 )}\if{html}{\out{</div>}}
 }
 

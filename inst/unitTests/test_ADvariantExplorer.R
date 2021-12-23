@@ -5,7 +5,7 @@ runTests <- function()
 {
     test_ctor()
     test_fullGwasCatalog()
-    test_filteredGwasCatalog()
+    test_filteredGwasCatalog_CLU()
 
     test_eqtlCatalogVariants()
     test_eqtCatalogVariants_combineSlightlyDiscordantStudies()
@@ -106,7 +106,7 @@ test_filteredGwasCatalog_CLU <- function()
     checkTrue(nrow(tbl.all.noTrim) > 110000)
     checkTrue(ncol(tbl.all.noTrim) > 40)
 
-} # test_filteredGwasCatalog
+} # test_filteredGwasCatalog_CLU
 #----------------------------------------------------------------------------------------------------
 test_eqtlCatalogSummary <- function()
 {
@@ -178,7 +178,7 @@ test_eqtlCatalogVariants <- function()
     1 + end - start
     tbl.1 <- avx$geteQTLsByLocationAndStudyID(chrom, start, end, study.1, simplify=TRUE)
 
-    tbl.2 <- avx$geteQTLsByLocationAndStudyID(chrom, start, end, study.2, simplify=TRUE)
+    tbl.2 <- avx$geteQTLsByLocationAndStudyID(chrom, start, end, study.2, method="tabix", simplify=TRUE)
     tbl.12 <- avx$geteQTLsByLocationAndStudyID(chrom, start, end, c(study.1, study.2), simplify=TRUE)
     checkEquals(nrow(tbl.1) + nrow(tbl.2), nrow(tbl.12))
 
