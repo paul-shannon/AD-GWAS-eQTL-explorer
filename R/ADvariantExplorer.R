@@ -1,5 +1,5 @@
 #' @title ADvariantExplorer
-#' @description A template for building documented, tested R6 classes
+#' @description access to GWAS and eQTL data, slighly optimized for Alzheimer's disease
 #' @name ADvariantExplorer
 
 #' @import catalogueR
@@ -62,13 +62,12 @@ ADvariantExplorer = R6Class("ADvariantExplorer",
         #' affecting any gene whatsoever
         #'
         #' @return a data.frame
-        getFilteredGwasTable = function(targetGeneOnly=TRUE, studyString="alzheimer"){
+        getFilteredGwasTable = function(targetGeneOnly=TRUE, studyString="alzheimer", trim.columns=TRUE){
             printf("--- entering getFilteredGwasTable, targetGeneOnly = %s", targetGeneOnly)
             tbl.sub <- subset(private$tbl.gwascat,
                               chrom==sub("chr", "", private$loc.chrom) &
                               start >= private$loc.start &
                               end <= private$loc.end)
-            xyz <- 99
             if(targetGeneOnly){
                keepers <- grep(private$targetGene, tbl.sub$MAPPED_GENE)
                tbl.sub <- tbl.sub[keepers,]
@@ -77,14 +76,16 @@ ADvariantExplorer = R6Class("ADvariantExplorer",
                soi <- grep(studyString, tbl.sub$STUDY, ignore.case=TRUE)
                tbl.sub <- tbl.sub[soi,]
                }
-            coi <- c("SNPS", "P.VALUE", "MAPPED_GENE", "FIRST.AUTHOR", "DATE", "INITIAL.SAMPLE.SIZE", "STUDY" )
-            tbl <- tbl.sub[, coi]
-            tbl$STUDY <- substr(tbl$STUDY, 1, 30)
-            tbl$INITIAL.SAMPLE.SIZE <- substr(tbl$INITIAL.SAMPLE.SIZE, 1, 20)
+            if(trim.columns){
+               coi <- c("SNPS", "P.VALUE", "MAPPED_GENE", "FIRST.AUTHOR", "DATE", "INITIAL.SAMPLE.SIZE", "STUDY" )
+               tbl <- tbl.sub[, coi]
+               tbl$STUDY <- substr(tbl$STUDY, 1, 30)
+               tbl$INITIAL.SAMPLE.SIZE <- substr(tbl$INITIAL.SAMPLE.SIZE, 1, 20)
+               }
             new.order <- order(tbl$P.VALUE, decreasing=FALSE)
             tbl <- tbl[new.order,]
             rownames(tbl) <- NULL
-            private$tbl.gwascat.filtered
+            private$tbl.gwascat.filtered <- tbl
             tbl
             },
 
@@ -116,7 +117,7 @@ ADvariantExplorer = R6Class("ADvariantExplorer",
 
         #------------------------------------------------------------
         #' @description returns the retrieval-ready study names given
-        #' (part of) a qtl_group string
+        #' @param groupMatchingString character, (part of) a qtl_group string
         #' @return a data.frame
         geteqtlStudyNamesForGroup = function(groupMatchingString){
             tbl.cat <- private$tbl.eqtl.summary
@@ -173,6 +174,9 @@ ADvariantExplorer = R6Class("ADvariantExplorer",
               } # for id
            tbl.out <- do.call(rbind.fill, tbls)
            rownames(tbl.out) <- NULL
+           browser()
+           if(is.null(tbl.out))
+               return(data.frame())
            new.order <- order(tbl.out$pvalue.QTL, decreasing=FALSE)
            tbl.out <- tbl.out[new.order,]
            coi <- c("rsid.QTL", "pvalue.QTL", "gene_id.QTL", "an.QTL", "beta.QTL", "id")
@@ -188,8 +192,24 @@ ADvariantExplorer = R6Class("ADvariantExplorer",
            tbl.out$gene <- tbl.map$symbol
            rownames(tbl.out) <- NULL
            invisible(as.data.frame(tbl.out))
-           } # geteEQTLsByLocationAndCategory
+           }, # geteEQTLsByLocationAndCategory
 
+        #------------------------------------------------------------------
+        #' @description returns one gene's cell types, or the entire table
+        #' from jiang et al 2020, nine cell types across 10 human (and mouse) brain regions:
+        #' https://www.sciencedirect.com/science/article/pii/S2589004220309664
+        #' scREAD: A Single-Cell RNA-Seq Database for Alzheimer's Disease
+        #' @param geneSymbol character string, either a HUGO gene symbol, or NA
+        #' @return a character vector or a data.frame (if geneSymbol param is NA)
+        getCellTypes=function(geneSymbol=NA){
+
+            tbl.cellTypes <- get(load(system.file(package="ADvariantExplorer", "extdata",
+                                                  "scRead.tbl.celltypes.3276904x12.RData")))
+            if(!is.na(geneSymbol))
+               return(subset(tbl.cellTypes, gene==geneSymbol))
+
+            invisible(tbl.cellTypes)
+            }
 
        ) # public
 

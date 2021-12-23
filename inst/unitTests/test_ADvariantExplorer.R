@@ -4,9 +4,12 @@ library(ADvariantExplorer)
 runTests <- function()
 {
     test_ctor()
-    test_gwasCatalog()
+    test_fullGwasCatalog()
+    test_filteredGwasCatalog()
+
     test_eqtlCatalogVariants()
     test_eqtCatalogVariants_combineSlightlyDiscordantStudies()
+    test_getCellTypes()
 
 } # runTests
 #----------------------------------------------------------------------------------------------------
@@ -24,9 +27,49 @@ test_ctor <- function()
 
 } # test_ctor
 #----------------------------------------------------------------------------------------------------
-test_gwasCatalog <- function()
+test_fullGwasCatalog <- function()
 {
-    message(sprintf("--- test_gwasCatalog"))
+    message(sprintf("--- test_fullGwasCatalog"))
+
+    targetGene <- "CLU"
+    loc.chrom <- "chr8"
+    loc.start <- 27447528
+    loc.end   <- 27764088
+    avx <- ADvariantExplorer$new(targetGene, loc.chrom, loc.start, loc.end)
+
+       #------------------------------------------------------------
+       # get the entire table, with and without trimming columns
+       #------------------------------------------------------------
+
+    tbl.all <- avx$getFullGwasTable(trim.columns=TRUE)
+    dim(tbl.all)
+    checkTrue(nrow(tbl.all) > 110000)
+    expected <- c("SNPS", "P.VALUE", "MAPPED_GENE", "FIRST.AUTHOR", "DATE", "INITIAL.SAMPLE.SIZE", "STUDY")
+    checkEquals(colnames(tbl.all), expected)
+
+    tbl.all <- avx$getFullGwasTable(trim.columns=FALSE)
+    checkTrue(nrow(tbl.all) > 110000)
+    checkTrue(ncol(tbl.all) > 40)
+
+    checkTrue(length(unique(tbl.all$STUDY)) > 3150)
+
+       #----------------------------------------------------
+       #  identify the studies with alzheimer in their name
+       #----------------------------------------------------
+
+    ad.studies <- unique(grep("alzh", tbl.all$STUDY, ignore.case=TRUE, v=TRUE))
+    checkTrue(length(ad.studies) > 65)
+
+} # test_fullGwasCatalog
+#----------------------------------------------------------------------------------------------------
+# CLU is a long-standing AD locus, primarily associated with rs11136000
+#    data.dir <- "~/github/TrenaProjectAD/inst/extdata/gwasLoci"
+#    tbl.wms <- get(load(file.path(data.dir, "williams-natureNeuroscience2020.RData")))
+#    tbl.posthuma <- get(load(file.path(data.dir, "tbl.posthuma-38-geneAssociations-curated-3828x12.RData")))
+
+test_filteredGwasCatalog_CLU <- function()
+{
+    message(sprintf("--- test_filteredGwasCatalog"))
 
     targetGene <- "CLU"
     loc.chrom <- "chr8"
@@ -63,7 +106,7 @@ test_gwasCatalog <- function()
     checkTrue(nrow(tbl.all.noTrim) > 110000)
     checkTrue(ncol(tbl.all.noTrim) > 40)
 
-} # test_gwasCatalog
+} # test_filteredGwasCatalog
 #----------------------------------------------------------------------------------------------------
 test_eqtlCatalogSummary <- function()
 {
@@ -205,6 +248,31 @@ test_eqtCatalogVariants_AD_associated_NDUFS2 <- function()
 
 } # test_eqtCatalogVariants_AD_associated_NDUFS2
 #----------------------------------------------------------------------------------------------------
+test_getCellTypes <- function()
+{
+   message(sprintf("--- test_getCellTypes"))
+
+   targetGene <- "NDUFS2"
+   tag.snp <- "rs4575098"
+   tag.snp.loc <- 161185602
+   chrom <- "1"
+   ld.snp  <- "rs11585858"
+
+   shoulder <- 10000
+   avx <- ADvariantExplorer$new(targetGene, chrom, tag.snp.loc-shoulder, tag.snp.loc+shoulder)
+   tbl.meis2 <- avx$getCellTypes("MEIS2")
+   checkTrue(nrow(tbl.meis2) > 500)
+   meis2.dist <- as.list(sort(table(tbl.meis2$ct), decreasing=TRUE))
+   checkEquals(names(meis2.dist), c("exc", "ast", "oli", "opc", "mic", "inh", "end"))
+      # excitatory neurons, astrocytes, oligodendrocytes, oligodendroctye precursor cells,
+      # microglia, inhibitory neurons, endothelial, [pericytes]
+
+   tbl.all <- avx$getCellTypes()
+   checkTrue(nrow(tbl.all) >  3250000)
+      #  "exc" "mic" "ast" "inh" "oli" "end" "opc" "per" "unk" "nk "
+
+} # test_getCellTypes
+#----------------------------------------------------------------------------------------------------
 explore.failed.fetches <- function()
 {
    targetGene <- "NDUFS2"
@@ -229,34 +297,39 @@ explore.failed.fetches <- function()
        #----------------------------------------
        # 25/108 failures (1 dec 2021)
        #----------------------------------------
-    # Alasoo_2018.macrophage_IFNg+Salmonella
-    # Schmiedel_2018.Tfh_memory
-    # Schmiedel_2018.Th17_memory
-    # Schmiedel_2018.Th1_memory
-    # Schmiedel_2018.Th2_memory
-    # Schmiedel_2018.Th1-17_memory
-    # Schmiedel_2018.B-cell_naive
-    # Schmiedel_2018.CD4_T-cell_naive
-    # Schmiedel_2018.CD8_T-cell_naive
-    # Schmiedel_2018.monocyte_CD16_naive
-    # Schmiedel_2018.monocyte_naive
-    # Schmiedel_2018.NK-cell_naive
-    # Braineac2.putamen
-    # Braineac2.substantia_nigra
-    # CommonMind.DLPFC_naive
-    # CAP.LCL_naive
-    # CAP.LCL_statin
-    # iPSCORE.iPSC
-    # Peng_2018.placenta_naive
-    # PhLiPS.iPSC
-    # PhLiPS.HLC
-    # Steinberg_2020.synovium_naive
-    # Steinberg_2020.low_grade_cartilage_naive
-    # Steinberg_2020.high_grade_cartilage_naive
-    # Young_2019.microglia_naive
+    failed.studies <- c("Alasoo_2018.macrophage_IFNg+Salmonella",
+                        "Schmiedel_2018.Tfh_memory",
+                        "Schmiedel_2018.Th17_memory",
+                        "Schmiedel_2018.Th1_memory",
+                        "Schmiedel_2018.Th2_memory",
+                        "Schmiedel_2018.Th1-17_memory",
+                        "Schmiedel_2018.B-cell_naive",
+                        "Schmiedel_2018.CD4_T-cell_naive",
+                        "Schmiedel_2018.CD8_T-cell_naive",
+                        "Schmiedel_2018.monocyte_CD16_naive",
+                        "Schmiedel_2018.monocyte_naive",
+                        "Schmiedel_2018.NK-cell_naive",
+                        "Braineac2.putamen",
+                        "Braineac2.substantia_nigra",
+                        "CommonMind.DLPFC_naive",
+                        "CAP.LCL_naive",
+                        "CAP.LCL_statin",
+                        "iPSCORE.iPSC",
+                        "Peng_2018.placenta_naive",
+                        "PhLiPS.iPSC",
+                        "PhLiPS.HLC",
+                        "Steinberg_2020.synovium_naive",
+                        "Steinberg_2020.low_grade_cartilage_naive",
+                        "Steinberg_2020.high_grade_cartilage_naive",
+                        "Young_2019.microglia_naive")
+
+   tbl <- avx$geteQTLsByLocationAndStudyID(chrom, tag.snp.loc-shoulder, tag.snp.loc+shoulder,
+                                           failed.studies, method="tabix", simplify=TRUE)
 
 
    dim(tbl)
+   save(tbl, file="~/github/ADvariantExplorer/explore/adamts4/tbl.eqtls.25initialFailures.61389x6.RData")
+
     # error message, in console and in web browser
     #  {"status": 404, "error": "Resource Not Found", "message":
     #  "Not found. Study :Alasoo_2018 with qtl_group: macrophage_IFNg Salmonella and quantification method: ge"}

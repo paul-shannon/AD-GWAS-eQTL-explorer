@@ -16,6 +16,7 @@ A template for building documented, tested R6 classes
 \item \href{#method-geteQTLSummary}{\code{ADvariantExplorer$geteQTLSummary()}}
 \item \href{#method-geteqtlStudyNamesForGroup}{\code{ADvariantExplorer$geteqtlStudyNamesForGroup()}}
 \item \href{#method-geteQTLsByLocationAndStudyID}{\code{ADvariantExplorer$geteQTLsByLocationAndStudyID()}}
+\item \href{#method-getCellTypes}{\code{ADvariantExplorer$getCellTypes()}}
 \item \href{#method-clone}{\code{ADvariantExplorer$clone()}}
 }
 }
@@ -65,13 +66,19 @@ the current value of the targetGene member
 access to the EMBL-EBI GWAS catalog via bioc, filtered
 by location and/or targetGene
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{ADvariantExplorer$getFilteredGwasTable(targetGeneOnly = TRUE)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{ADvariantExplorer$getFilteredGwasTable(
+  targetGeneOnly = TRUE,
+  studyString = "alzheimer"
+)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{targetGeneOnly}}{logical, default TRUE, otherwise all variants in this regeion,
+\item{\code{targetGeneOnly}}{logical, default TRUE, otherwise all variants in this regeion,}
+
+\item{\code{studyString}}{character, default "alzheimer", possibly empty string or any other
+  study field matchabel substring
 affecting any gene whatsoever}
 }
 \if{html}{\out{</div>}}
@@ -120,11 +127,17 @@ a data.frame
 \if{latex}{\out{\hypertarget{method-geteqtlStudyNamesForGroup}{}}}
 \subsection{Method \code{geteqtlStudyNamesForGroup()}}{
 returns the retrieval-ready study names given
-(part of) a qtl_group string
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{ADvariantExplorer$geteqtlStudyNamesForGroup(groupMatchingString)}\if{html}{\out{</div>}}
 }
 
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{groupMatchingString}}{character, (part of) a qtl_group string}
+}
+\if{html}{\out{</div>}}
+}
 \subsection{Returns}{
 a data.frame
 }
@@ -166,6 +179,29 @@ and sQTL (splicing
 }
 \subsection{Returns}{
 a data.frame ordered by increasing pvalue.QTL
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-getCellTypes"></a>}}
+\if{latex}{\out{\hypertarget{method-getCellTypes}{}}}
+\subsection{Method \code{getCellTypes()}}{
+returns one gene's cell types, or the entire table
+from jiang et al 2020, nine cell types across 10 human (and mouse) brain regions:
+https://www.sciencedirect.com/science/article/pii/S2589004220309664
+scREAD: A Single-Cell RNA-Seq Database for Alzheimer's Disease
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{ADvariantExplorer$getCellTypes(geneSymbol = NA)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{geneSymbol}}{character string, either a HUGO gene symbol, or NA}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+a character vector or a data.frame (if geneSymbol param is NA)
 }
 }
 \if{html}{\out{<hr>}}
