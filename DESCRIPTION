@@ -1,8 +1,8 @@
 Package: ADvariantExplorer
 Type: Package
 Title: ADvariantExplorer
-Version: 1.0.9
-Date: 2021-12-23
+Version: 1.0.11
+Date: 2021-12-24
 Author: Paul Shannon
 Maintainer: Paul Shannon<paul.thurmond.shannon@gmail.com>
 Imports: catalogueR, gwascat
@@ -11,3 +11,6 @@ Depends: R (>= 4.1.0), R6, EnsDb.Hsapiens.v79
 License: MIT
 Encoding: UTF-8
 RoxygenNote: 7.1.2
+Collate:
+    'ADvariantExplorer.R'
+    'EQTLCatalogFetcher.R'

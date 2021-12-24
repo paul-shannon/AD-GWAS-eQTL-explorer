@@ -8,13 +8,16 @@ library(EndophenotypeExplorer)
 library(ADvariantExplorer)
 targetGene <- "ADAMTS4"
 tag.snp <- "rs4575098"
-chrom.loc <- "1"
-start.loc <-  161158170
-end.loc   <-  161225185
 
-printf("span: %d", 1 + end.loc-start.loc)
-tbl.hap <- read.table("haploreg-rs4575098-0.2.tsv", sep="\t", as.is=TRUE, header=TRUE)
+tbl.hap <- read.table("~/github/ADvariantExplorer/explore/adamts4-study/haploreg-rs4575098-0.2.tsv", sep="\t", as.is=TRUE, header=TRUE)
 dim(tbl.hap)
+
+chrom.loc <- "1"
+shoulder <- 10000
+start.loc <-  min(tbl.hap$hg38) - shoulder
+end.loc   <-  max(tbl.hap$hg38) + shoulder
+printf("span: %d", 1 + end.loc-start.loc)
+
 
 # calculated in test_ADvariantExplorer.R, with these parameters
 #    tag.snp <- "rs4575098"
@@ -45,7 +48,10 @@ if(!exists("avx")){
 #----------------------------------------------------------------------------------------------------
 gwas.survey <- function()
 {
+    tbl.gwasAll <- avx$getFullGwasTable()
+    dim(tbl.gwasAll)  # 111685 43
     tbl.gwas <- avx$getFilteredGwasTable(targetGeneOnly=FALSE, studyString="alzheimer")
+    tbl.gwas <- avx$getFilteredGwasTable(targetGeneOnly=FALSE) #, studyString="alzheimer")
 
     dim(tbl.gwas)
 

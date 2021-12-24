@@ -1,6 +1,7 @@
 library(TrenaMultiScore)
 library(TrenaProjectAD)
 library(EndophenotypeExplorer)
+library(ADvariantExplorer)
 library(RUnit)
 library(trena)
 library(motifbreakR)
@@ -17,6 +18,8 @@ tbl.oc <- get(load("~/github/TrenaProjectAD/inst/extdata/genomicRegions/boca-hg3
 tbl.tagHap <- read.table("~/github/ADvariantExplorer/explore/adamts4-study/haploreg-rs4575098-0.2.tsv",
                           sep="\t", as.is=TRUE, header=TRUE)
 dim(tbl.tagHap)
+
+avx <- ADvariantExplorer$new(targetGene, "chr1", 161198314, 161215395)
 #----------------------------------------------------------------------------------------------------
 createTMS <- function()
 {
@@ -29,16 +32,31 @@ createTMS <- function()
     addDistanceToTSS(tms)
     addGenicAnnotations(tms)
     addChIP(tms)
+    tbl.tms <- getMultiScoreTable(tms)
 
     names(etx$get.rna.matrix.codes())
-    code <- "old-rosmap"
+
+    code <- "max-tcx"
     mtx.rna <- etx$get.rna.matrix(code)
-    addGeneExpressionCorrelations(tms, mtx.rna, featureName="old.rosmap", method="spearman")
-
+    addGeneExpressionCorrelations(tms, mtx.rna, featureName=code, method="spearman")
     tbl.tms <- getMultiScoreTable(tms)
-    dim(tbl.tms)  # 817786 18
+    fivenum(tbl.tms[, code])    # -0.64 -0.31 -0.12  0.10  0.67
 
-    dim(subset(tbl.tms, chip & gh > 5 & fimo_pvalue < 1e-5 & abs(old.rosmap) > 0.3))
+    code <- "max-rosmap"
+    mtx.rna <- etx$get.rna.matrix(code)
+    addGeneExpressionCorrelations(tms, mtx.rna, featureName=code, method="spearman")
+    tbl.tms <- getMultiScoreTable(tms)
+    fivenum(tbl.tms[, code])    #  -0.39 -0.14 -0.04  0.05  0.31
+
+    code <- "gtex.v8.Brain_Cortex"
+    mtx.rna <- etx$get.rna.matrix(code)
+    addGeneExpressionCorrelations(tms, mtx.rna, featureName=code, method="spearman")
+    tbl.tms <- getMultiScoreTable(tms)
+    fivenum(tbl.tms[, code])    #  -0.67 -0.40 -0.14  0.15  0.75
+
+    dim(tbl.tms)  # 817786 18  -0.67 -0.40 -0.14  0.15  0.75
+
+    dim(subset(tbl.tms, chip & gh > 5 & fimo_pvalue < 1e-5 & abs(gtex.v8.Brain_Cortex) > 0.3))
 
     checkTrue(mean(tbl.tms$gh) > 0)
     table(tbl.tms$oc)
@@ -57,15 +75,17 @@ createTMS <- function()
 
     tbl.tms <- getMultiScoreTable(tms)
     dim(tbl.tms)
-    tbl.tms.sub <- subset(tbl.tms, (gh > 0 | oc) & brain.eqtl > 5 & abs(old.rosmap) > 0.15 & fimo_pvalue < 1e-3)
+    tbl.tms.sub <- subset(tbl.tms, (gh > 0 | oc) & brain.eqtl > 5 & abs(gtex.v8.Brain_Cortex) > 0.4 & fimo_pvalue < 1e-3)
     tbl.tms.sub <- subset(tbl.tms, (chip & oc) | brain.eqtl > 5)
     tbl.tms.sub <- subset(tbl.tms, brain.eqtl > 5 & oc)
     dim(tbl.tms.sub) # 104 19
     tfs <- tbl.tms.sub$tf
     length(unique(tfs)) # 51
     table(tbl.tms.sub$tf)
-    tfs.unique <- unique(tfs)
+    tfs.unique <- unique(tbl.tms.sub$tf)
     length(tfs.unique) # 51
+    save(tbl.tms, file="tbl.tms.21dec2021.817786x21.RData")
+
 
     #tbl.tsne <- unique(tbl.tms.sub[, c("oc", "old.rosmap", "gh", "brain.eqtl", "tf")])
     #tfs <- tbl.tsne$tf
@@ -79,23 +99,62 @@ createTMS <- function()
 runTrena <- function()
 {
    noquote(names(etx$get.rna.matrix.codes()))
-   code <- "old-rosmap"
-   mtx.rna <- etx$get.rna.matrix(code)
 
-   solver <- EnsembleSolver(mtx.rna,
-                           targetGene=targetGene,
-                           candidateRegulators=tfs.unique,
-                           solverNames=c("lasso", "Ridge", "Spearman", "Pearson", "RandomForest", "xgboost"),
-			   geneCutoff=1.0)
-   tbl.out <- run(solver)
-   new.order <- order(abs(tbl.out$spearman), decreasing=TRUE)
-   head(tbl.out[new.order,], n=20)
-   dim(tbl.out)
-   tfbs.counts <- unlist(lapply(tbl.out$gene, function(gene) nrow(subset(tbl.tms.sub, tf==gene))))
-   tbl.out$tfbs <- tfbs.counts
-   tbl.out <- tbl.out[order(tbl.out$rfScore, decreasing=TRUE),]
-   rownames(tbl.out) <- NULL
-   for(cname in colnames(tbl.out)[2:7]) tbl.out[, cname] <- round(tbl.out[, cname], digits=2)
+   codes <- names(etx$get.rna.matrix.codes())
+   keepers <- c(grep("gtex", codes), grep("^max", codes))
+   codes <- codes[keepers]
+   deleters <- grep("Spinal", codes)
+   codes <- codes[-deleters]
+   tbls.trena <- list()
+
+   for(code in codes){
+      printf("-------------- code: %s", code)
+      mtx.rna <- etx$get.rna.matrix(code)
+      mtx.rna[is.na(mtx.rna)] <- 0
+      dim(mtx.rna)
+      var <- apply(mtx.rna, 1, var)
+      deleters <- which(is.na(var))
+      length(deleters)
+      if(length(deleters) > 0)
+          mtx.rna <- mtx.rna[-deleters,]
+      solver <- EnsembleSolver(mtx.rna,
+                               targetGene=targetGene,
+                               candidateRegulators=tfs.unique,
+                               solverNames=c("lasso", "Ridge", "Spearman", "Pearson", "RandomForest", "xgboost"),
+                               geneCutoff=1.0)
+      tbl.out <- run(solver)
+      new.order <- order(abs(tbl.out$spearman), decreasing=TRUE)
+      head(tbl.out[new.order,], n=20)
+      dim(tbl.out)
+      tfbs.counts <- unlist(lapply(tbl.out$gene, function(gene) nrow(subset(tbl.tms.sub, tf==gene))))
+      tbl.out$tfbs <- tfbs.counts
+      tbl.out <- tbl.out[order(tbl.out$rfScore, decreasing=TRUE),]
+      rownames(tbl.out) <- NULL
+      for(cname in colnames(tbl.out)[2:7]) tbl.out[, cname] <- round(tbl.out[, cname], digits=2)
+      tbl.final <- head(tbl.out, n=50)
+      goi <- c(targetGene, tbl.final$gene)
+      length(goi)
+      tbl.ctAll <- avx$getCellTypes()
+      ct <- unlist(lapply(goi, function(g)
+          paste(sort(unique(subset(tbl.ctAll, gene==g & p_val_adj < 0.05)$ct)), collapse=",")))
+      target.gene.ct <- ct[1]
+      tbl.final$cellTypes <- ct[2:51]
+      tbl.final$mtx <- code
+      tbl.final$rank <- seq_len(nrow(tbl.final))
+      tbls.trena[[code]] <- tbl.final
+      }
+   tbl.trena <- do.call(rbind, tbls.trena)
+   deleters <- which(nchar(tbl.trena$cellTypes) == 0)
+   tbl.trena <- tbl.trena[-deleters,]
+   rownames(tbl.trena) <- NULL
+   dim(tbl.trena)
+   tbl.tfs <- as.data.frame(sort(table(tbl.trena$gene), decreasing=TRUE))
+   tfs.main <- names(sort(table(tbl.trena$gene), decreasing=TRUE))
+
+   tbl.trena.strong <- subset(tbl.trena, rank <= 10)
+   tbl.tf.counts <- head(as.data.frame(sort(table(tbl.trena.strong$gene), decreasing=TRUE)), n=20)
+   tbl.tf.counts$Var1 <- as.character(tbl.tf.counts$Var1)
+
 
 
 } # runTrena
@@ -108,13 +167,12 @@ break.motifs <- function()
    snps.gr <- snps.from.rsid(rsid=snps,
                               dbSNP=SNPlocs.Hsapiens.dbSNP151.GRCh38,
                               search.genome=BSgenome.Hsapiens.UCSC.hg38)
-   tfs.unique
-   length(tfs.unique)
+   tfs.oi <- tbl.tf.counts[,1]
    mdb <- query(MotifDb, "Hsapiens", c("jaspar2018", "hocomoco-core-A"))
-   mdb.indices <- match(tfs.unique, mcols(mdb)$geneSymbol)
+   mdb.indices <- match(tfs.oi, mcols(mdb)$geneSymbol)
    length(mdb.indices)
    mdb.indices <- mdb.indices[-which(is.na(mdb.indices))]
-   length(mdb.indices)
+   length(mdb.indices)  # 18
 
    motifs <- mdb[mdb.indices]
    length(motifs)
@@ -132,7 +190,11 @@ break.motifs <- function()
    tbl.breaks$pctDelta <- with(tbl.breaks, pctAlt - pctRef)
    new.order <- order(abs(tbl.breaks$pctDelta), decreasing=TRUE)
    tbl.breaks <- tbl.breaks[new.order,]
-   unique(subset(tbl.breaks, geneSymbol %in% head(tbl.out$gene))$SNP_id)
+
+   coi <- c(6:8,5,  11,12,13, 16, 17, 25)
+   save(tbl.tms, tbl.trena, tbl.breaks, file="tms.trena.breaks-15dec21.RData")
+
+  # unique(subset(tbl.breaks, geneSymbol %in% head(tbl.out$gene))$SNP_id)
 
 
 } # break.motifs
