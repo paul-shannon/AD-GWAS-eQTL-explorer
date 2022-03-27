@@ -148,7 +148,7 @@ ADvariantExplorer = R6Class("ADvariantExplorer",
                   #if(method=="rest"){
                       suppressWarnings({tbl <- eQTL_Catalogue.fetch(unique_id=id,
                                                                     quant_method="ge",
-                                                                    #use_tabix=FALSE,
+                                                                    method="REST",
                                                                     chrom = sub("chr", "", chrom),
                                                                     bp_lower=start,
                                                                     bp_upper=end,
