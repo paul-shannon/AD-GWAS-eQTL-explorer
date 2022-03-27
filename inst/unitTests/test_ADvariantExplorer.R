@@ -13,6 +13,42 @@ runTests <- function()
 
 } # runTests
 #----------------------------------------------------------------------------------------------------
+test_simpleFetch <- function()
+{
+
+  require(catalogueR)
+
+        # 10 bases on either side of rs4575098
+   loc.chrom <- "1"
+   loc.start <- 161185592
+   loc.end   <- 161185612
+   study <- "GTEx_V8.Brain_Hippocampus"
+
+   tbl <- eQTL_Catalogue.fetch(unique_id=study,
+                               quant_method="ge",
+                               #use_tabix=FALSE,
+                               chrom = loc.chrom,
+                               bp_lower=loc.start,
+                               bp_upper=loc.end,
+                               verbose=TRUE)
+   checkEquals(ncol(tbl), 24)
+   checkTrue(nrow(tbl) > 50)   # 57 on
+
+   subset(tbl, pvalue.QTL < 1e-2)[, c("gene.QTL", "pvalue.QTL", "beta.QTL", "rsid.QTL")]
+
+   targetGene <- "NDUFS2"
+   require(ADvariantExplorer)
+
+   avx <- ADvariantExplorer$new(targetGene, loc.chrom, loc.start, loc.end)
+   tbl.2 <- avx$geteQTLsByLocationAndStudyID(loc.chrom, loc.start, loc.end, study, simplify=TRUE)
+   tbl.top <- subset(tbl.2, pvalue <= 0.01)
+   checkTrue(nrow(tbl.top) > = 2)
+   #        rsid      pvalue   gene total.alleles      beta                        id
+   # 1 rs4575098 0.000259162 NDUFS2           330 -0.222035 GTEx_V8.Brain_Hippocampus
+   # 2 rs4575098 0.007248770  TSTD1           330  0.205420 GTEx_V8.Brain_Hippocampus
+
+} # test_simpleFetch
+#----------------------------------------------------------------------------------------------------
 test_ctor <- function()
 {
     message(sprintf("--- test_ctor"))
