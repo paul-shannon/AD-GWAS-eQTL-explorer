@@ -4,6 +4,7 @@ library(ADvariantExplorer)
 runTests <- function()
 {
     test_ctor()
+    test_simpleFetch()
     test_fullGwasCatalog()
     test_filteredGwasCatalog_CLU()
 
@@ -13,6 +14,7 @@ runTests <- function()
 
 } # runTests
 #----------------------------------------------------------------------------------------------------
+# defaults to method=REST, depends upon dev branch as of (27 mar 2022)
 test_simpleFetch <- function()
 {
 
