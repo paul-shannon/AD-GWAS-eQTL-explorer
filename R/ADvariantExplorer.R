@@ -183,12 +183,18 @@ ADvariantExplorer = R6Class("ADvariantExplorer",
               tbl.out <- tbl.out[, coi]
               colnames(tbl.out) <- c("rsid", "pvalue", "gene", "total.alleles", "beta", "id")
               }
-           map <- mapIds(EnsDb.Hsapiens.v79, tbl.out$gene, "SYMBOL", "GENEID")
-           tbl.map <- data.frame(ensg=names(map), symbol=as.character(map), stringsAsFactors=FALSE)
-           na.indices <- which(is.na(tbl.map$symbol))
-           length(na.indices)
-           tbl.map$symbol[na.indices] <- tbl.map$ensg[na.indices]
-           tbl.out$gene <- tbl.map$symbol
+           #message(sprintf("--- mapping %d genes from ensg to symbol: %d unique",
+           #                 length(tbl.out$gene), length(unique(tbl.out$gene))))
+           ensg <- as.character(mapIds(EnsDb.Hsapiens.v79, private$targetGene, "GENEID", "SYMBOL"))
+           tbl.out <- subset(tbl.out, gene==ensg)
+           tbl.out$gene <- private$targetGene
+           message(sprintf("%d variants for %s, corrected from %s", nrow(tbl.out), private$targetGene, ensg))
+           #map <- mapIds(EnsDb.Hsapiens.v79, tbl.out$gene, "SYMBOL", "GENEID")
+           #tbl.map <- data.frame(ensg=names(map), symbol=as.character(map), stringsAsFactors=FALSE)
+           #na.indices <- which(is.na(tbl.map$symbol))
+           #length(na.indices)
+           #tbl.map$symbol[na.indices] <- tbl.map$ensg[na.indices]
+           #tbl.out$gene <- tbl.map$symbol
            rownames(tbl.out) <- NULL
            invisible(as.data.frame(tbl.out))
            }, # geteEQTLsByLocationAndCategory
