@@ -178,7 +178,7 @@ test_eqtlCatalogVariants <- function()
     1 + end - start
     tbl.1 <- avx$geteQTLsByLocationAndStudyID(chrom, start, end, study.1, simplify=TRUE)
 
-    tbl.2 <- avx$geteQTLsByLocationAndStudyID(chrom, start, end, study.2, method="tabix", simplify=TRUE)
+    tbl.2 <- avx$geteQTLsByLocationAndStudyID(chrom, start, end, study.2, simplify=TRUE)
     tbl.12 <- avx$geteQTLsByLocationAndStudyID(chrom, start, end, c(study.1, study.2), simplify=TRUE)
     checkEquals(nrow(tbl.1) + nrow(tbl.2), nrow(tbl.12))
 
@@ -207,7 +207,7 @@ test_eqtCatalogVariants_combineSlightlyDiscordantStudies <- function()
 
     studies <- c("BrainSeq.brain",  "ROSMAP.brain_naive")
     i <- 2
-    tbl <- avx$geteQTLsByLocationAndStudyID(chrom[i], start[i], end[i], studies, method="REST", simplify=TRUE)
+    tbl <- avx$geteQTLsByLocationAndStudyID(chrom[i], start[i], end[i], studies, simplify=TRUE)
     checkTrue(nrow(tbl) > 35)
     checkEquals(ncol(tbl), 6)
 
@@ -223,7 +223,7 @@ test_eqtCatalogVariants_AD_associated_NDUFS2 <- function()
    chrom <- "1"
    ld.snp  <- "rs11585858"
 
-   shoulder <- 1000
+   shoulder <- 100
    avx <- ADvariantExplorer$new(targetGene, chrom, tag.snp.loc-shoulder, tag.snp.loc+shoulder)
    tbl.gwas <- avx$getFilteredGwasTable()
    dim(tbl.gwas)
@@ -231,20 +231,32 @@ test_eqtCatalogVariants_AD_associated_NDUFS2 <- function()
 
    studies <- c("BrainSeq.brain",  "ROSMAP.brain_naive")
    i <- 2
-   tbl <- avx$geteQTLsByLocationAndStudyID(chrom[i], start[i], end[i], studies, method="REST", simplify=TRUE)
+   #tbl <- avx$geteQTLsByLocationAndStudyID(chrom, tag.snp.loc-shoulder, tag.snp.loc+shoulder,
+   #                                        studies, simplify=TRUE)
 
-   tbl.cat <- avx$geteQTLSummary()
-   dim(tbl.cat)
-   studies <- c()
-   studies <- c(studies, subset(tbl.cat, qtl_group=="macrophage_naive" & quant_method=="ge")$unique_id)
-   studies <- c(studies, subset(tbl.cat, study=="GTEx_V8" & grepl("Brain", tissue_label))$unique_id)
+   tbl.eCat <- avx$geteQTLSummary()
+   dim(tbl.eCat)
+   checkTrue(nrow(tbl.eCat) > 450)
+   checkTrue(ncol(tbl.eCat) >= 10)
 
-   studies <- sort(unique(subset(tbl.cat, quant_method=="ge"))$unique_id)
-   length(studies)
-   tbl <- avx$geteQTLsByLocationAndStudyID(chrom, tag.snp.loc-shoulder, tag.snp.loc+shoulder, studies, method="REST", simplify=TRUE)
-   dim(tbl)
-   head(tbl, n=20)
-   subset(tbl, rsid=="rs4575098" & pvalue < 1e-3)
+   brain.geneExpression.studies <- subset(tbl.eCat, grepl("brain", tissue_label, ignore.case=TRUE) &
+                                                   quant_method=="ge")$unique_id
+   gtex.v8.brain.studies <- grep("GTEx_V8", brain.geneExpression.studies, value=TRUE)
+   length(gtex.v8.brain.studies)
+   checkTrue(length(gtex.v8.brain.studies) > 10 & length(gtex.v8.brain.studies) < 20)
+
+   tbl.eqtl <- avx$geteQTLsByLocationAndStudyID(chrom, tag.snp.loc-shoulder, tag.snp.loc+shoulder,
+                                           gtex.v8.brain.studies, simplify=TRUE)
+   tbl.eqtl.ndufs2 <- subset(tbl.eqtl, gene=="NDUFS2")
+   checkTrue(nrow(tbl.eqtl.ndufs2) > 10)
+   checkTrue(nrow(tbl.eqtl.ndufs2) < 20)
+
+   also.examine.the.variant <- function(){
+      library(EndophenotypeExplorer)
+      etx <- EndophenotypeExplorer$new("NDUFS2", "hg38", vcf.project="ADNI")
+      etx$getAggregatedAlleleFrequencies("rs4575098", quiet=FALSE)
+      mtx.geno <- etx$getGenoMatrixByRSID("rs4575098")
+      }
 
 } # test_eqtCatalogVariants_AD_associated_NDUFS2
 #----------------------------------------------------------------------------------------------------
@@ -292,7 +304,7 @@ explore.failed.fetches <- function()
    studies <- studies[-old.gtex.notWorking]
    length(studies)   # 108
    tbl <- avx$geteQTLsByLocationAndStudyID(chrom, tag.snp.loc-shoulder, tag.snp.loc+shoulder,
-                                           studies, method="REST", simplify=TRUE)
+                                           studies, simplify=TRUE)
 
        #----------------------------------------
        # 25/108 failures (1 dec 2021)
@@ -324,7 +336,7 @@ explore.failed.fetches <- function()
                         "Young_2019.microglia_naive")
 
    tbl <- avx$geteQTLsByLocationAndStudyID(chrom, tag.snp.loc-shoulder, tag.snp.loc+shoulder,
-                                           failed.studies, method="tabix", simplify=TRUE)
+                                           failed.studies, simplify=TRUE)
 
 
    dim(tbl)

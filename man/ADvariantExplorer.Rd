@@ -156,7 +156,6 @@ and sQTL (splicing
   start,
   end,
   studyIDs,
-  method = "REST",
   simplify = FALSE
 )}\if{html}{\out{</div>}}
 }
@@ -172,9 +171,9 @@ and sQTL (splicing
 
 \item{\code{studyIDs}}{character vector, one or more values from eQTL summary unique_id column}
 
-\item{\code{method}}{character, either REST or tabix, REST by default}
-
 \item{\code{simplify}}{logical, trims columns to just the crucial 4: rsid, pvalue, gene, samples}
+
+\item{\code{method}}{character, either REST or tabix, REST by default}
 }
 \if{html}{\out{</div>}}
 }

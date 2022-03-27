@@ -138,32 +138,32 @@ ADvariantExplorer = R6Class("ADvariantExplorer",
         #' @param method character, either REST or tabix, REST by default
         #' @param simplify logical, trims columns to just the crucial 4: rsid, pvalue, gene, samples
         #' @return a data.frame ordered by increasing pvalue.QTL
-        geteQTLsByLocationAndStudyID = function(chrom, start, end, studyIDs, method="REST", simplify=FALSE){
-           method <- tolower(method)
-           stopifnot(method %in% c("rest", "tabix"))
+        geteQTLsByLocationAndStudyID = function(chrom, start, end, studyIDs, simplify=FALSE){
+           #method <- tolower(method)
+           #stopifnot(method %in% c("rest", "tabix"))
            tbls <- list()
            for(id in studyIDs){
               message(sprintf("--- fetching %s (ge)", id))
               tryCatch({
-                  if(method=="rest"){
+                  #if(method=="rest"){
                       suppressWarnings({tbl <- eQTL_Catalogue.fetch(unique_id=id,
                                                                     quant_method="ge",
-                                                                    use_tabix=FALSE,
+                                                                    #use_tabix=FALSE,
                                                                     chrom = sub("chr", "", chrom),
                                                                     bp_lower=start,
                                                                     bp_upper=end,
                                                                     verbose=TRUE)})
-                  } # rest
-                  else{ # tabix
-                      suppressWarnings({tbl <- eQTL_Catalogue.fetch(unique_id=id,
-                                                                    quant_method="ge",
-                                                                    nThread = 1,
-                                                                    use_tabix=TRUE,
-                                                                    chrom = sub("chr", "", chrom),
-                                                                    bp_lower=start,
-                                                                    bp_upper=end,
-                                                                    verbose=TRUE)})
-                  } # tabix
+                  #} # rest
+                  #else{ # tabix
+                  #    suppressWarnings({tbl <- eQTL_Catalogue.fetch(unique_id=id,
+                  #                                                  quant_method="ge",
+                  #                                                  nThread = 1,
+                  #                                                  use_tabix=TRUE,
+                  #                                                  chrom = sub("chr", "", chrom),
+                  #                                                  bp_lower=start,
+                  #                                                  bp_upper=end,
+                  #                                                  verbose=TRUE)})
+                  #} # tabix
                   tbl$id <- id
                   tbls[[id]] <- tbl
               },

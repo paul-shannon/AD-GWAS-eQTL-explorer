@@ -6,11 +6,17 @@
 #----------------------------------------------------------------------------------------------------
 library(EndophenotypeExplorer)
 library(ADvariantExplorer)
+
+etx <- EndophenotypeExplorer$new(NA, NA, initialize.snpLocs=TRUE)
+
 targetGene <- "ADAMTS4"
 tag.snp <- "rs4575098"
+tag.snp.2 <- "rs2070902"
 
 tbl.hap <- read.table("~/github/ADvariantExplorer/explore/adamts4-study/haploreg-rs4575098-0.2.tsv", sep="\t", as.is=TRUE, header=TRUE)
 dim(tbl.hap)
+tbl.hap.2 <- read.table("~/github/ADvariantExplorer/explore/adamts4-study/haploreg-rs2070902-0.2.tsv", sep="\t", as.is=TRUE, header=TRUE)
+dim(tbl.hap.2)
 
 chrom.loc <- "1"
 shoulder <- 10000
@@ -59,23 +65,58 @@ gwas.survey <- function()
 #----------------------------------------------------------------------------------------------------
 viz <- function()
 {
-   if(!exists(igv)){
-      igv <- start.igv(targetGene, "hg38")
-      zoomOut(igv)
-      zoomOut(igv)
+   if(!exists("igv")){
+      igv <<- start.igv(targetGene, "hg38")
+      showGenomicRegion(igv, "chr1:161,068,852-161,253,859")
       }
 
    tbl.tag.snp <- subset(tbl.hap, rsid==tag.snp)[, c("chrom", "hg38", "hg38", "rsid")]
    colnames(tbl.tag.snp) <- c("chrom", "start", "end", "rsid")
    tbl.tag.snp$start <- tbl.tag.snp$start - 1
-   track <- DataFrameAnnotationTrack("tag.snp", tbl.tag.snp, color="red")
+   track <- DataFrameAnnotationTrack(tag.snp, tbl.tag.snp, color="red")
    displayTrack(igv, track)
 
    tbl.hap.snp <- tbl.hap[, c("chrom", "hg38", "hg38", "rSquared")]
    colnames(tbl.hap.snp) <- c("chrom", "start", "end", "score")
    tbl.hap.snp$start <- tbl.hap.snp$start - 1
-   track <- DataFrameQuantitativeTrack("hap.snp", tbl.hap.snp, color="brown", autoscale=TRUE)
+   track <- DataFrameQuantitativeTrack("haplo.snps R^2", tbl.hap.snp, color="brown", autoscale=TRUE)
    displayTrack(igv, track)
+
+   if(FALSE){
+      if(!exists("tbl.eqtl.ndufs2")){
+         tbl.eqtls <- get(load("tbl.eqtls.240310x6-10.brain.tissues.RData"))
+         tbl.eqtl.ndufs2 <- subset(tbl.eqtls, gene=="NDUFS2" & pvalue < 1e-2)
+         dim(tbl.eqtl.ndufs2) # 457 6
+         tbl.rsid.locs <- etx$rsidToLoc(unique(tbl.eqtl.ndufs2$rsid))
+         tbl.rsid.locs <- unique(tbl.rsid.locs)
+         dim(tbl.rsid.locs)
+         tbl.eqtl.ndufs2 <- merge(tbl.eqtl.ndufs2, tbl.rsid.locs, by="rsid", all.x=TRUE)
+         save(tbl.eqtl.ndufs2, file="tbl.eqtl.ndufs2-10.brainTissues.pval.01.RData")
+         as.data.frame(table(tbl.eqtl.ndufs2$id))
+           # 1                         GTEx_V8.Brain_Amygdala    1
+           # 2   GTEx_V8.Brain_Anterior_cingulate_cortex_BA24   40
+           # 3            GTEx_V8.Brain_Cerebellar_Hemisphere  103
+           # 4                           GTEx_V8.Brain_Cortex   32
+           # 5               GTEx_V8.Brain_Frontal_Cortex_BA9   18
+           # 6                      GTEx_V8.Brain_Hippocampus   70
+           # 7                     GTEx_V8.Brain_Hypothalamus   35
+           # 8  GTEx_V8.Brain_Nucleus_accumbens_basal_ganglia   60
+           # 9         GTEx_V8.Brain_Spinal_cord_cervical_c-1   40
+           # 10                            ROSMAP.brain_naive   58
+          } # if exists
+      for(tissue in sort(unique(tbl.eqtl.ndufs2$id))){
+          tbl.track <- subset(tbl.eqtl.ndufs2, id==tissue)[, c("chrom", "hg38", "hg38", "pvalue", "rsid")]
+          colnames(tbl.track) <- c("chrom", "start", "end", "score", "name")
+          tbl.track$start <- tbl.track$start - 1
+          tbl.track$score <- -log10(tbl.track$score)
+          track.name <- sprintf("NDUFS2 eqtl %s", sub("GTEx_V8.", "", tissue, fixed=TRUE))
+          track <- DataFrameQuantitativeTrack(track.name, tbl.track,
+                                              autoscale=FALSE, min=0, max=10,
+                                              color="random",
+                                              trackHeight=30)
+          displayTrack(igv, track)
+          } # for tissue
+       } # manhattan plots for NDUFS2 in multiple tissues
 
 } # viz
 #----------------------------------------------------------------------------------------------------
@@ -88,14 +129,16 @@ eQTLs <- function()
    tbl.cat <- avx$geteQTLSummary()
    studies <- unique(subset(tbl.cat, quant_method=="ge")$unique_id)
    length(studies)  # 157
-   old.gtex.notWorking <- grep("GTEx.", studies, fixed=TRUE)
-   length(old.gtex.notWorking) # 49
-   studies <- studies[-old.gtex.notWorking]
-   length(studies)   # 108
+   studies.brain <- grep("gtex_v8.brain", studies, ignore.case=TRUE, v=TRUE)
+   studies.brain <- c("ROSMAP.brain_naive", studies.brain)
+   #old.gtex.notWorking <- grep("GTEx.", studies, fixed=TRUE)
+   #length(old.gtex.notWorking) # 49
+   #studies <- studies[-old.gtex.notWorking]
+   length(studies.brain)   # 14
 
    tbl.eqtls <- avx$geteQTLsByLocationAndStudyID(roi$chrom, roi$start, roi$end,
-                                                 studies, method="REST", simplify=TRUE)
-   save(tbl.eqtls, file="tbl.eqtls.1420652x6.RData")
+                                                 studies.brain, method="REST", simplify=TRUE)
+   save(tbl.eqtls, file="tbl.eqtls.240310x6-10.brain.tissues.RData")
 
     strong.hap.rsid <- subset(tbl.hap, rSquared >= 0.5)$rsid
     length(strong.hap.rsid)  # 19
