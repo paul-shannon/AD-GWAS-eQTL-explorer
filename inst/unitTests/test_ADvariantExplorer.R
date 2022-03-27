@@ -44,7 +44,7 @@ test_simpleFetch <- function()
    avx <- ADvariantExplorer$new(targetGene, loc.chrom, loc.start, loc.end)
    tbl.2 <- avx$geteQTLsByLocationAndStudyID(loc.chrom, loc.start, loc.end, study, simplify=TRUE)
    tbl.top <- subset(tbl.2, pvalue <= 0.01)
-   checkTrue(nrow(tbl.top) > = 2)
+   checkTrue(nrow(tbl.top) >= 2)
    #        rsid      pvalue   gene total.alleles      beta                        id
    # 1 rs4575098 0.000259162 NDUFS2           330 -0.222035 GTEx_V8.Brain_Hippocampus
    # 2 rs4575098 0.007248770  TSTD1           330  0.205420 GTEx_V8.Brain_Hippocampus
