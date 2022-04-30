@@ -37,7 +37,7 @@ ADvariantExplorer = R6Class("ADvariantExplorer",
             private$loc.chrom <- loc.chrom
             private$loc.start <- loc.start
             private$loc.end   <- loc.end
-            f <- system.file(package="ADvariantExplorer", "extdata", "gwascat-31oct2021.RData")
+            f <- system.file(package="ADvariantExplorer", "extdata", "gwascat-29apr2022.RData")
             gr.gwascat <- get(load(f))
             tbl.gwascat <- as.data.frame(gr.gwascat)
             colnames(tbl.gwascat)[1] <- "chrom"
