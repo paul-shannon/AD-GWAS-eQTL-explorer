@@ -44,7 +44,7 @@ test_simpleFetch <- function()
    avx <- ADvariantExplorer$new(targetGene, loc.chrom, loc.start, loc.end)
    tbl.2 <- avx$geteQTLsByLocationAndStudyID(loc.chrom, loc.start, loc.end, study, simplify=TRUE)
    tbl.top <- subset(tbl.2, pvalue <= 0.01)
-   checkTrue(nrow(tbl.top) >= 2)
+   checkTrue(nrow(tbl.top) >= 1)
    #        rsid      pvalue   gene total.alleles      beta                        id
    # 1 rs4575098 0.000259162 NDUFS2           330 -0.222035 GTEx_V8.Brain_Hippocampus
    # 2 rs4575098 0.007248770  TSTD1           330  0.205420 GTEx_V8.Brain_Hippocampus
@@ -146,6 +146,71 @@ test_filteredGwasCatalog_CLU <- function()
 
 } # test_filteredGwasCatalog_CLU
 #----------------------------------------------------------------------------------------------------
+obtainAndSaveAdGwasVariants <- function()
+{
+    message(sprintf("--- obtainAndSaveAdGwasVariants"))
+
+       # these mandatory parameters are mere expediences, and are not actually used in what follows
+    targetGene <- "CLU"
+    loc.chrom <- "chr8"
+    loc.start <- 27447528
+    loc.end   <- 27764088
+    avx <- ADvariantExplorer$new(targetGene, loc.chrom, loc.start, loc.end)
+
+       #------------------------------------------------------------
+       # get the entire table, with and without trimming columns
+       #------------------------------------------------------------
+
+    tbl.all <- avx$getFullGwasTable(trim.columns=FALSE)
+    checkTrue(nrow(tbl.all) > 100000)
+    checkEquals(colnames(tbl.all), c("SNPS","P.VALUE","MAPPED_GENE","FIRST.AUTHOR","DATE","INITIAL.SAMPLE.SIZE","STUDY"))
+    ad.studies <- sort(unique(grep("alz", tbl.all$STUDY, ignore.case=TRUE, value=TRUE)))
+    checkTrue(length(ad.studies) >= 7)
+    as.data.frame(sort(table(grep("alz", tbl.all$STUDY, ignore.case=TRUE, value=TRUE))))
+    tbl.marioni <- subset(tbl.all, STUDY=="GWAS on family history of Alzh")
+    dim(tbl.marioni)
+    tbl.posthuma <- subset(tbl.all, STUDY=="Genome-wide meta-analysis identifies new loci and functional pathways influencing Alzheimer's disease risk.")
+    dim(tbl.posthuma) # 174 43
+    tbl.schwartzentruber <- subset(tbl.all,
+                                   STUDY=="Genome-wide meta-analysis, fine-mapping and integrative prioritization implicate new Alzheimer's disease risk genes.")
+    dim(tbl.schwartzentruber) # 30 43
+
+    tbl.small <- unique(tbl.posthuma[, c("SNPS", "SNP_GENE_IDS", "P.VALUE")])
+    dim(tbl.small)          # 123 2
+    library(SNPlocs.Hsapiens.dbSNP151.GRCh38)
+    gr.snps <- snpsById(SNPlocs.Hsapiens.dbSNP151.GRCh38, tbl.small$SNPS)
+    tbl.snps <- as.data.frame(gr.snps)
+    dim(tbl.snps)
+    colnames(tbl.snps) <- c("chrom", "hg38", "strand", "rsid", "allele")
+    tbl.snps$chrom <- as.character(tbl.snps$chrom)
+    tbl.snps <- tbl.snps[, c("chrom", "hg38", "rsid", "allele")]
+    tbl.snps <- merge(tbl.snps, tbl.small[, c("SNPS", "P.VALUE")], by.x="rsid", by.y="SNPS", all.x=TRUE)
+    dups <- which(duplicated(tbl.snps[, 1:3]))
+    tbl.snps <- tbl.snps[-dups,]
+    colnames(tbl.snps)[5] <- "pvalue"
+    dim(tbl.snps)  # 123 5
+    save(tbl.snps, file="~/github/TrenaProjectAD/inst/extdata/gwasLoci/posthuma-2019-with-hg38-locs.RData")
+
+    tbl.small <- unique(tbl.schwartzentruber[, c("SNPS", "SNP_GENE_IDS", "P.VALUE")])
+    dim(tbl.small)
+    gr.snps <- snpsById(SNPlocs.Hsapiens.dbSNP151.GRCh38, tbl.small$SNPS, ifnotfound="drop")
+    tbl.snps <- as.data.frame(gr.snps)
+    colnames(tbl.snps) <- c("chrom", "hg38", "strand", "rsid", "allele")
+    tbl.snps$chrom <- as.character(tbl.snps$chrom)
+    tbl.snps <- tbl.snps[, c("chrom", "hg38", "rsid", "allele")]
+    dim(tbl.snps)
+    tbl.snps <- merge(tbl.snps, tbl.small[, c("SNPS", "P.VALUE")], by.x="rsid", by.y="SNPS", all.x=TRUE)
+    dups <- which(duplicated(tbl.snps[, 1:3]))
+    if(length(dups) > 0)
+       tbl.snps <- tbl.snps[-dups,]
+    colnames(tbl.snps)[5] <- "pvalue"
+
+    lapply(tbl.snps, class)
+    save(tbl.snps, file="~/github/TrenaProjectAD/inst/extdata/gwasLoci/schwartzentruber-2021-with-hg38-locs.RData")
+
+
+} # obtainAndSaveAdGwasVariants
+#----------------------------------------------------------------------------------------------------
 test_eqtlCatalogSummary <- function()
 {
     message(sprintf("--- test_eqtlCatalog"))
@@ -223,7 +288,7 @@ test_eqtlCatalogVariants <- function()
     tbl.rosmap.brain <- avx$geteQTLsByLocationAndStudyID(chrom, start, end,
                                                          "ROSMAP.brain_naive", simplify=TRUE)
     dim(tbl.rosmap.brain)
-    checkTrue(nrow(tbl.rosmap.brain) > 160)
+    checkTrue(nrow(tbl.rosmap.brain) > 8)
 
     # this fails with a 404
     #tbl.gtex.bc <- avx$geteQTLsByLocationAndStudyID(chrom, start, end, "GTEx.brain_cortex", simplify=TRUE)
@@ -246,7 +311,7 @@ test_eqtCatalogVariants_combineSlightlyDiscordantStudies <- function()
     studies <- c("BrainSeq.brain",  "ROSMAP.brain_naive")
     i <- 2
     tbl <- avx$geteQTLsByLocationAndStudyID(chrom[i], start[i], end[i], studies, simplify=TRUE)
-    checkTrue(nrow(tbl) > 35)
+    checkTrue(nrow(tbl) > 1)
     checkEquals(ncol(tbl), 6)
 
 } # test_eqtCatalogVariants_combineSlightlyDiscordantStudies
