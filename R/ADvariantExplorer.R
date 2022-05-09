@@ -145,27 +145,19 @@ ADvariantExplorer = R6Class("ADvariantExplorer",
            for(id in studyIDs){
               message(sprintf("--- fetching %s (ge)", id))
               tryCatch({
-                  #if(method=="rest"){
-                      suppressWarnings({tbl <- eQTL_Catalogue.fetch(unique_id=id,
-                                                                    quant_method="ge",
-                                                                    method="REST",
-                                                                    chrom = sub("chr", "", chrom),
-                                                                    bp_lower=start,
-                                                                    bp_upper=end,
-                                                                    verbose=TRUE)})
-                  #} # rest
-                  #else{ # tabix
-                  #    suppressWarnings({tbl <- eQTL_Catalogue.fetch(unique_id=id,
-                  #                                                  quant_method="ge",
-                  #                                                  nThread = 1,
-                  #                                                  use_tabix=TRUE,
-                  #                                                  chrom = sub("chr", "", chrom),
-                  #                                                  bp_lower=start,
-                  #                                                  bp_upper=end,
-                  #                                                  verbose=TRUE)})
-                  #} # tabix
-                  tbl$id <- id
-                  tbls[[id]] <- tbl
+                  #browser()
+                  suppressWarnings({tbl <- eQTL_Catalogue.fetch(unique_id=id,
+                                                                quant_method="ge",
+                                                                method="REST",
+                                                                chrom = sub("chr", "", chrom),
+                                                                bp_lower=start,
+                                                                bp_upper=end,
+                                                                verbose=TRUE)})
+                  printf("%s %d-%d, %d", id, start, end, nrow(tbl))
+                  if(nrow(tbl) > 0){
+                     tbl$id <- id
+                     tbls[[id]] <- tbl
+                     }
               },
               error = function(e){
                   message(sprintf("eQTL_Catalogue.fetch failed on study %s", id))
@@ -173,6 +165,7 @@ ADvariantExplorer = R6Class("ADvariantExplorer",
                   })
               } # for id
            tbl.out <- do.call(rbind.fill, tbls)
+           printf("--- avx fetch, after rbind.fill")
            rownames(tbl.out) <- NULL
            if(is.null(tbl.out))
                return(data.frame())
@@ -186,9 +179,14 @@ ADvariantExplorer = R6Class("ADvariantExplorer",
            #message(sprintf("--- mapping %d genes from ensg to symbol: %d unique",
            #                 length(tbl.out$gene), length(unique(tbl.out$gene))))
            ensg <- as.character(mapIds(EnsDb.Hsapiens.v79, private$targetGene, "GENEID", "SYMBOL"))
+           if(!ensg %in% tbl.out$gene){   # these eQTLs are not for the target gene
+               message(sprintf("ADv$geteQTLsByLocationAndStudyID, %d eqtls found, but none for %s",
+                               nrow(tbl.out), private$targetGene))
+               return(data.frame())
+               }
            tbl.out <- subset(tbl.out, gene==ensg)
            tbl.out$gene <- private$targetGene
-           message(sprintf("%d variants for %s, corrected from %s", nrow(tbl.out), private$targetGene, ensg))
+           message(sprintf("--- %d variants for %s, corrected from %s", nrow(tbl.out), private$targetGene, ensg))
            #map <- mapIds(EnsDb.Hsapiens.v79, tbl.out$gene, "SYMBOL", "GENEID")
            #tbl.map <- data.frame(ensg=names(map), symbol=as.character(map), stringsAsFactors=FALSE)
            #na.indices <- which(is.na(tbl.map$symbol))

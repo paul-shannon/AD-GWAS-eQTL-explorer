@@ -1,8 +1,8 @@
 Package: ADvariantExplorer
 Type: Package
 Title: ADvariantExplorer
-Version: 1.0.20
-Date: 2022-05-08
+Version: 1.0.21
+Date: 2022-05-09
 Author: Paul Shannon
 Maintainer: Paul Shannon<paul.thurmond.shannon@gmail.com>
 Imports: catalogueR, gwascat
