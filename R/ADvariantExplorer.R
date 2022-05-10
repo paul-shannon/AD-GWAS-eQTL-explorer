@@ -136,9 +136,10 @@ ADvariantExplorer = R6Class("ADvariantExplorer",
         #' @param end numeric
         #' @param studyIDs character vector, one or more values from eQTL summary unique_id column
         #' @param method character, either REST or tabix, REST by default
+        #' @param targetGene.only logical, default TRUE, otherwise result has all eQTL genes in the region
         #' @param simplify logical, trims columns to just the crucial 4: rsid, pvalue, gene, samples
         #' @return a data.frame ordered by increasing pvalue.QTL
-        geteQTLsByLocationAndStudyID = function(chrom, start, end, studyIDs, simplify=FALSE){
+        geteQTLsByLocationAndStudyID = function(chrom, start, end, studyIDs, targetGene.only=TRUE, simplify=FALSE){
            #method <- tolower(method)
            #stopifnot(method %in% c("rest", "tabix"))
            tbls <- list()
@@ -176,23 +177,24 @@ ADvariantExplorer = R6Class("ADvariantExplorer",
               tbl.out <- tbl.out[, coi]
               colnames(tbl.out) <- c("rsid", "pvalue", "gene", "total.alleles", "beta", "id")
               }
-           #message(sprintf("--- mapping %d genes from ensg to symbol: %d unique",
-           #                 length(tbl.out$gene), length(unique(tbl.out$gene))))
-           ensg <- as.character(mapIds(EnsDb.Hsapiens.v79, private$targetGene, "GENEID", "SYMBOL"))
-           if(!ensg %in% tbl.out$gene){   # these eQTLs are not for the target gene
-               message(sprintf("ADv$geteQTLsByLocationAndStudyID, %d eqtls found, but none for %s",
-                               nrow(tbl.out), private$targetGene))
-               return(data.frame())
+           if(targetGene.only){
+              ensg <- as.character(mapIds(EnsDb.Hsapiens.v79, private$targetGene, "GENEID", "SYMBOL"))
+              if(!ensg %in% tbl.out$gene){   # these eQTLs are not for the target gene
+                  message(sprintf("ADv$geteQTLsByLocationAndStudyID, %d eqtls found, but none for %s",
+                                  nrow(tbl.out), private$targetGene))
+                  return(data.frame())
+                  }
+              tbl.out <- subset(tbl.out, gene==ensg)
+              tbl.out$gene <- private$targetGene
+              message(sprintf("--- %d variants for %s, corrected from %s", nrow(tbl.out), private$targetGene, ensg))
+           } else {
+               map <- mapIds(EnsDb.Hsapiens.v79, tbl.out$gene, "SYMBOL", "GENEID")
+               tbl.map <- data.frame(ensg=names(map), symbol=as.character(map), stringsAsFactors=FALSE)
+               na.indices <- which(is.na(tbl.map$symbol))
+               length(na.indices)
+               tbl.map$symbol[na.indices] <- tbl.map$ensg[na.indices]
+               tbl.out$gene <- tbl.map$symbol
                }
-           tbl.out <- subset(tbl.out, gene==ensg)
-           tbl.out$gene <- private$targetGene
-           message(sprintf("--- %d variants for %s, corrected from %s", nrow(tbl.out), private$targetGene, ensg))
-           #map <- mapIds(EnsDb.Hsapiens.v79, tbl.out$gene, "SYMBOL", "GENEID")
-           #tbl.map <- data.frame(ensg=names(map), symbol=as.character(map), stringsAsFactors=FALSE)
-           #na.indices <- which(is.na(tbl.map$symbol))
-           #length(na.indices)
-           #tbl.map$symbol[na.indices] <- tbl.map$ensg[na.indices]
-           #tbl.out$gene <- tbl.map$symbol
            rownames(tbl.out) <- NULL
            invisible(as.data.frame(tbl.out))
            }, # geteEQTLsByLocationAndCategory

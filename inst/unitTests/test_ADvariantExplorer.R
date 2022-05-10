@@ -316,6 +316,41 @@ test_eqtCatalogVariants_combineSlightlyDiscordantStudies <- function()
 
 } # test_eqtCatalogVariants_combineSlightlyDiscordantStudies
 #----------------------------------------------------------------------------------------------------
+test_eqtlCatalogVariantsMultipleGenes <- function()
+{
+   message(sprintf("--- test_eqtlCatalogVariantsMultipleGenes"))
+   targetGene <- "EGFR"
+   tag.snp <- "rs76928645"
+   tag.snp.hg19 <- 54941328
+   tag.snp.hg38 <- 54873635
+   tag.snp.chrom <- "chr7"
+
+   shoulder <- 10000
+   avx <- ADvariantExplorer$new(targetGene, tag.snp.chrom,
+                                tag.snp.hg38-shoulder, tag.snp.hg38+shoulder)
+
+   #tbl.gwas <- avx$getFilteredGwasTable()
+   #dim(tbl.gwas)
+   #tbl.gwas
+   tbl.eCat <- avx$geteQTLSummary()
+   brain.geneExpression.studies <- subset(tbl.eCat, grepl("brain", tissue_label, ignore.case=TRUE) &
+                                                    quant_method=="ge")$unique_id
+   gtex.v8.brain.studies <- grep("GTEx_V8", brain.geneExpression.studies, value=TRUE)
+   length(gtex.v8.brain.studies) # 13
+
+
+
+   studies <- gtex.v8.brain.studies # c("GTEx_V8.Brain_Cortex", "GTEx_V8.Brain_Hippocampus")
+   tbl.eqtl <- avx$geteQTLsByLocationAndStudyID(tag.snp.chrom,
+                                                tag.snp.hg38-shoulder,
+                                                tag.snp.hg38+shoulder,
+                                                studies,
+                                                targetGene.only=FALSE,
+                                                simplify=TRUE)
+   table(tbl.eqtl$gene)
+    
+} # test_eqtlCatalogVariantsMultipleGenes
+#----------------------------------------------------------------------------------------------------
 test_eqtCatalogVariants_AD_associated_NDUFS2 <- function()
 {
    message(sprintf("--- test_eqtCatalogVariants_AD_associated_NDUFS2"))
